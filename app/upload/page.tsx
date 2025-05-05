@@ -43,16 +43,18 @@ export default function UploadPage() {
 
     setUploadSuccess(false)
 
-    // Simulate upload progress
+    // Simulate upload progress with slower increments for longer processing time
     const progressInterval = setInterval(() => {
       setUploadProgress((prev) => {
-        if (prev >= 95) {
-          clearInterval(progressInterval)
-          return prev
+        if (prev >= 90) {
+          // Slow down progress at 90% to account for server processing time
+          return prev + 0.5
+        } else if (prev >= 70) {
+          return prev + 1
         }
-        return prev + 5
+        return prev + 2
       })
-    }, 200)
+    }, 300)
 
     try {
       await uploadDocument(selectedFile, data.documentType)

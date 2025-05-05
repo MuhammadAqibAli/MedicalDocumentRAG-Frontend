@@ -30,95 +30,12 @@ export default function ContentDetailPage() {
       setContent(fetchedContent)
     } catch (error) {
       console.error("Failed to load content:", error)
-      // For demo purposes, use mock data if API fails
-      if (id === "1") {
-        setContent({
-          id: "1",
-          topic: "Diabetes Management Protocol",
-          contentType: "procedure",
-          modelName: "gpt-4-medical",
-          content: `# Diabetes Management Protocol
-
-## Overview
-This protocol outlines the standard procedures for managing patients with diabetes in primary care settings across New Zealand healthcare facilities.
-
-## Assessment
-1. Conduct comprehensive initial assessment including:
-   - Medical history
-   - Family history
-   - Current medications
-   - Lifestyle factors
-   - Physical examination
-
-2. Laboratory tests:
-   - HbA1c
-   - Fasting plasma glucose
-   - Lipid profile
-   - Kidney function tests
-   - Urine albumin-to-creatinine ratio
-
-## Management
-1. Lifestyle modifications:
-   - Nutritional counseling
-   - Physical activity recommendations
-   - Smoking cessation support
-   - Alcohol consumption guidance
-
-2. Medication management:
-   - First-line therapy: Metformin
-   - Second-line options based on patient characteristics
-   - Insulin therapy when indicated
-
-3. Monitoring:
-   - Regular HbA1c testing (every 3-6 months)
-   - Annual comprehensive foot examination
-   - Annual eye examination
-   - Regular blood pressure monitoring
-
-## Complications Screening
-1. Cardiovascular disease
-2. Diabetic nephropathy
-3. Diabetic retinopathy
-4. Diabetic neuropathy
-5. Foot complications
-
-## Patient Education
-1. Self-monitoring of blood glucose
-2. Recognition of hypoglycemia and hyperglycemia
-3. Foot care
-4. Medication adherence
-5. Sick day management
-
-## Referral Criteria
-1. Endocrinology referral
-2. Ophthalmology referral
-3. Nephrology referral
-4. Podiatry referral
-
-## Documentation Requirements
-All patient encounters must be documented in the electronic health record according to New Zealand health information standards.`,
-          createdAt: "2023-05-15T10:30:00Z",
-          validationResults: {
-            valid: true,
-          },
-          sourceChunks: [
-            {
-              text: "Diabetes management should include regular monitoring of HbA1c levels every 3-6 months.",
-              source: "NZ Diabetes Guidelines 2023.pdf",
-            },
-            {
-              text: "Metformin is recommended as the first-line pharmacological therapy for type 2 diabetes.",
-              source: "Clinical Pharmacy Handbook.pdf",
-            },
-          ],
-        })
-      }
     }
   }
 
   const copyToClipboard = () => {
     if (content) {
-      navigator.clipboard.writeText(content.content)
+      navigator.clipboard.writeText(content.generated_text)
       alert("Content copied to clipboard")
     }
   }
@@ -163,9 +80,9 @@ All patient encounters must be documented in the electronic health record accord
               <div>
                 <CardTitle className="text-2xl">{content.topic}</CardTitle>
                 <CardDescription className="flex items-center gap-2 mt-2">
-                  <Badge variant="outline">{content.contentType}</Badge>
-                  <Badge variant="secondary">{content.modelName}</Badge>
-                  {content?.validationResults?.valid ? (
+                  <Badge variant="outline">{content.content_type}</Badge>
+                  <Badge variant="secondary">{content.llm_model_used}</Badge>
+                  {content?.validation_results?.["Clinical Relevance"] ? (
                     <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       Valid
@@ -198,12 +115,15 @@ All patient encounters must be documented in the electronic health record accord
                 <TabsTrigger value="sources">Sources</TabsTrigger>
               </TabsList>
               <TabsContent value="content" className="mt-4">
-                <div className="bg-muted p-6 rounded-md whitespace-pre-wrap">{content.content}</div>
+                <div className="bg-muted p-6 rounded-md whitespace-pre-wrap">{content.generated_text}</div>
               </TabsContent>
               <TabsContent value="validation" className="mt-4">
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    {content.validationResults && content.validationResults.valid ? (
+                    {content.validation_results && 
+                      content.validation_results["Consistency"] && 
+                      content.validation_results["Language Tone"] && 
+                      content.validation_results["Clinical Relevance"] ? (
                       <Alert className="bg-green-50 border-green-200">
                         <CheckCircle2 className="h-4 w-4 text-green-600" />
                         <AlertTitle className="text-green-600">Valid Content</AlertTitle>
@@ -221,16 +141,48 @@ All patient encounters must be documented in the electronic health record accord
                     )}
                   </div>
 
-                  {content.validationResults && content.validationResults.issues && content.validationResults.issues.length > 0 && (
+                  {content.validation_results && (
                     <div className="bg-muted p-4 rounded-md">
-                      <h4 className="font-medium mb-2">Issues Found:</h4>
-                      <ul className="list-disc pl-5 space-y-1">
-                        {content.validationResults.issues.map((issue, index) => (
-                          <li key={index} className="text-sm">
-                            {issue}
-                          </li>
-                        ))}
+                      <h4 className="font-medium mb-2">Validation Results:</h4>
+                      <ul className="space-y-2">
+                        <li className="flex items-center gap-2">
+                          <Badge className={content.validation_results["Consistency"] ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                            {content.validation_results["Consistency"] ? 
+                              <CheckCircle2 className="h-3 w-3 mr-1" /> : 
+                              <AlertCircle className="h-3 w-3 mr-1" />}
+                            Consistency
+                          </Badge>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Badge className={content.validation_results["Language Tone"] ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                            {content.validation_results["Language Tone"] ? 
+                              <CheckCircle2 className="h-3 w-3 mr-1" /> : 
+                              <AlertCircle className="h-3 w-3 mr-1" />}
+                            Language Tone
+                          </Badge>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Badge className={content.validation_results["Clinical Relevance"] ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                            {content.validation_results["Clinical Relevance"] ? 
+                              <CheckCircle2 className="h-3 w-3 mr-1" /> : 
+                              <AlertCircle className="h-3 w-3 mr-1" />}
+                            Clinical Relevance
+                          </Badge>
+                        </li>
                       </ul>
+                      
+                      {content.validation_results["Potential Issues"] && content.validation_results["Potential Issues"].length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="font-medium mb-2">Potential Issues:</h4>
+                          <ul className="list-disc pl-5 space-y-1">
+                            {content.validation_results["Potential Issues"].map((issue, index) => (
+                              <li key={index} className="text-sm">
+                                {issue}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -261,7 +213,7 @@ All patient encounters must be documented in the electronic health record accord
             </Tabs>
           </CardContent>
           <CardFooter className="flex justify-between border-t px-6 py-4">
-            <p className="text-sm text-muted-foreground">Generated on {new Date(content.createdAt).toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground">Generated on {new Date(content.created_at).toLocaleString()}</p>
           </CardFooter>
         </Card>
       ) : (

@@ -17,8 +17,12 @@ export interface Document {
 export type ContentType = "policy" | "procedure" | "guideline" | "summary" | "other"
 
 export interface ValidationResult {
-  valid: boolean
-  issues?: string[]
+  valid?: boolean;
+  issues?: string[];
+  "Consistency"?: boolean;
+  "Language Tone"?: boolean;
+  "Clinical Relevance"?: boolean;
+  "Potential Issues"?: string[];
 }
 
 export interface SourceChunk {
@@ -106,9 +110,12 @@ function getMockGeneratedContents(): GeneratedContent[] {
 }
 
 export interface Model {
-  name: string
-  description?: string
+  name: string;
+  description?: string;
 }
+
+// Add a type for the API response
+export type ModelsApiResponse = Model[] | string[] | { models: (Model[] | string[]) };
 
 interface MedicalAssistantContextType {
   // State
@@ -152,7 +159,7 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
           headers: {
             "Content-Type": "multipart/form-data",
           },
-          timeout: 30000, // 30 seconds timeout
+          timeout: 120000, // Increased to 120 seconds (2 minutes) timeout
         })
         return response.data
       } catch (error) {
@@ -189,7 +196,7 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
           content_type: contentType,
           model_name: modelName,
         }, {
-          timeout: 60000, // 60 seconds timeout for generation
+          timeout: 180000, 
         })
         return response.data
       } catch (error) {
@@ -214,31 +221,35 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
 
     async fetchAvailableModels(): Promise<Model[]> {
       try {
-        const response = await axios.get(`${api.baseUrl}/models/`, {
+        const response = await axios.get<string[] | Model[]>(`${api.baseUrl}/models/`, {
           timeout: 10000, // 10 seconds timeout
-        })
-        return response.data
-      } catch (error) {
-        console.error("Error fetching available models:", error)
-        if (axios.isAxiosError(error)) {
-          if (error.code === 'ECONNABORTED') {
-            throw new Error("Request timed out. Please try again.")
-          }
-          if (error.response) {
-            if (error.response.status >= 500) {
-              throw new Error("Server error. Please try again later.")
-            }
-          } else if (error.request) {
-            throw new Error("No response from server. Please check your connection and try again.")
-          }
+        });
+        
+        console.log("API response for models:", response.data);
+        
+        // Handle array of strings response
+        if (Array.isArray(response.data)) {
+          return response.data.map(model => 
+            typeof model === 'string' ? { name: model } : model
+          );
         }
-
-        // Return mock models if API fails
+        
+        // If response is not an array, return fallback models
         return [
-          { name: "gpt-4-medical", description: "Advanced medical content generation" },
-          { name: "med-llama", description: "Specialized for medical documentation" },
-          { name: "clinical-bert", description: "Focused on clinical terminology" },
-        ]
+          { name: "llama3-8b-instruct" },
+          { name: "mistral-7b-instruct" },
+          { name: "phi-3-mini-instruct" },
+          { name: "tinyllama-1.1b-chat" }
+        ];
+      } catch (error) {
+        console.error("Error fetching available models:", error);
+        // Return fallback models instead of throwing
+        return [
+          { name: "llama3-8b-instruct" },
+          { name: "mistral-7b-instruct" },
+          { name: "phi-3-mini-instruct" },
+          { name: "tinyllama-1.1b-chat" }
+        ];
       }
     },
 
@@ -262,22 +273,58 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
           if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
             console.warn("API request timed out - using mock data")
             // Don't throw error for timeouts, just use mock data
-            return getMockGeneratedContents()
+            return getMockGeneratedContents().filter(content => {
+              // Apply filters to mock data
+              if (filters.content_type && content.content_type !== filters.content_type) {
+                return false
+              }
+              if (filters.search && !content.topic.toLowerCase().includes(filters.search.toLowerCase())) {
+                return false
+              }
+              return true
+            })
           }
 
           if (error.response) {
             if (error.response.status >= 500) {
               console.warn("Server error - using mock data")
-              return getMockGeneratedContents()
+              return getMockGeneratedContents().filter(content => {
+                // Apply filters to mock data
+                if (filters.content_type && content.content_type !== filters.content_type) {
+                  return false
+                }
+                if (filters.search && !content.topic.toLowerCase().includes(filters.search.toLowerCase())) {
+                  return false
+                }
+                return true
+              })
             }
           } else if (error.request) {
             console.warn("No response from server - using mock data")
-            return getMockGeneratedContents()
+            return getMockGeneratedContents().filter(content => {
+              // Apply filters to mock data
+              if (filters.content_type && content.content_type !== filters.content_type) {
+                return false
+              }
+              if (filters.search && !content.topic.toLowerCase().includes(filters.search.toLowerCase())) {
+                return false
+              }
+              return true
+            })
           }
         }
 
-        // Return mock data if API fails
-        return getMockGeneratedContents()
+        // Return filtered mock data if API fails
+        return getMockGeneratedContents().filter(content => {
+          // Apply filters to mock data
+          if (filters.content_type && content.content_type !== filters.content_type) {
+            return false
+          }
+          if (filters.search && !content.topic.toLowerCase().includes(filters.search.toLowerCase())) {
+            return false
+          }
+          return true
+        })
       }
     },
 

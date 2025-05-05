@@ -30,41 +30,10 @@ export default function HistoryPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
-  // Mock data for demonstration
-  const mockContents: GeneratedContent[] = [
-    {
-      id: "1",
-      topic: "Diabetes Management Protocol",
-      contentType: "procedure",
-      modelName: "gpt-4-medical",
-      content: "This is a sample diabetes management protocol...",
-      createdAt: "2023-05-15T10:30:00Z",
-      validationResults: { valid: true },
-    },
-    {
-      id: "2",
-      topic: "COVID-19 Vaccination Guidelines",
-      contentType: "guideline",
-      modelName: "med-llama",
-      content: "Guidelines for COVID-19 vaccination...",
-      createdAt: "2023-05-14T14:45:00Z",
-      validationResults: { valid: true },
-    },
-    {
-      id: "3",
-      topic: "Patient Privacy Policy",
-      contentType: "policy",
-      modelName: "clinical-bert",
-      content: "Privacy policy for patient data...",
-      createdAt: "2023-05-13T09:15:00Z",
-      validationResults: { valid: false, issues: ["Missing required section on data retention"] },
-    },
-  ]
-
-  // Include fetchGeneratedContents in the dependency array to prevent stale closures
+  // Remove mock data and rely on API response
   useEffect(() => {
     loadContents()
-  }, [currentPage, contentTypeFilter, fetchGeneratedContents])
+  }, [currentPage, contentTypeFilter])
 
   const loadContents = async () => {
     try {
@@ -80,22 +49,13 @@ export default function HistoryPage() {
 
       // Ensure fetchedContents is always an array
       const safeContents = Array.isArray(fetchedContents) ? fetchedContents : []
-
-      // Only update state if we have valid data
-      if (safeContents.length > 0) {
-        setContents(safeContents)
-      } else if (mockContents.length > 0 && safeContents.length === 0) {
-        // Use mock data if API returns empty array
-        setContents(mockContents)
-      }
+      setContents(safeContents)
 
       // In a real application, the API would return pagination info
-      // This is just a mock for demonstration
-      setTotalPages(Math.ceil((safeContents.length || mockContents.length) / 10) || 1)
+      setTotalPages(Math.ceil(safeContents.length / 10) || 1)
     } catch (error) {
       console.error("Failed to load contents:", error)
-      // Don't clear contents on error, use mock data instead
-      setContents(mockContents)
+      setContents([])
     }
   }
 
@@ -107,14 +67,16 @@ export default function HistoryPage() {
   const handleContentTypeChange = (value: string) => {
     setContentTypeFilter(value as ContentType | "all")
     setCurrentPage(1)
+    // Trigger content reload when filter changes
+    setTimeout(() => loadContents(), 0)
   }
 
   const handleRowClick = (id: string) => {
     router.push(`/history/${id}`)
   }
 
-  // Ensure we have a valid array to work with
-  const displayContents = Array.isArray(contents) && contents.length > 0 ? contents : mockContents
+  // Use only the API data, no fallback to mock data
+  const displayContents = Array.isArray(contents) ? contents : []
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -204,7 +166,7 @@ export default function HistoryPage() {
                       <TableHead>Type</TableHead>
                       <TableHead>Model</TableHead>
                       <TableHead>Created</TableHead>
-                      <TableHead>Status</TableHead>
+                      {/* <TableHead>Status</TableHead> */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -216,18 +178,18 @@ export default function HistoryPage() {
                       >
                         <TableCell className="font-medium">{content.topic}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{content.contentType || content.content_type}</Badge>
+                          <Badge variant="outline">{content.content_type}</Badge>
                         </TableCell>
-                        <TableCell>{content.modelName || content.llm_model_used}</TableCell>
-                        <TableCell>{new Date(content.createdAt || content.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          {(content.validationResults && content.validationResults.valid) ||
+                        <TableCell>{content.llm_model_used}</TableCell>
+                        <TableCell>{new Date(content.created_at).toLocaleDateString()}</TableCell>
+                        {/* <TableCell>
+                          {
                            (content.validation_results && content.validation_results.valid) ? (
                             <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Valid</Badge>
                           ) : (
                             <Badge variant="destructive">Invalid</Badge>
                           )}
-                        </TableCell>
+                        </TableCell> */}
                       </TableRow>
                     ))}
                   </TableBody>

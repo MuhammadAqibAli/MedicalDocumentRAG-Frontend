@@ -43,27 +43,41 @@ export default function GeneratePage() {
   useEffect(() => {
     const loadModels = async () => {
       try {
-        const availableModels = await fetchAvailableModels()
-        setModels(Array.isArray(availableModels) ? availableModels : [])
-
+        const availableModels = await fetchAvailableModels();
+        console.log("Available models:", availableModels);
+        
         if (Array.isArray(availableModels) && availableModels.length > 0) {
-          form.setValue("modelName", availableModels[0].name)
-        } else if (mockModels.length > 0) {
-          form.setValue("modelName", mockModels[0].name)
+          setModels(availableModels);
+          form.setValue("modelName", availableModels[0].name);
+        } else {
+          // Fallback if no models returned
+          const fallbackModels = [
+            { name: "llama3-8b-instruct" },
+            { name: "mistral-7b-instruct" },
+            { name: "phi-3-mini-instruct" },
+            { name: "tinyllama-1.1b-chat" }
+          ];
+          setModels(fallbackModels);
+          form.setValue("modelName", fallbackModels[0].name);
         }
       } catch (error) {
-        console.error("Failed to load models:", error)
-        setModels([])
-        if (mockModels.length > 0) {
-          form.setValue("modelName", mockModels[0].name)
-        }
+        console.error("Failed to load models:", error);
+        // Fallback to hardcoded models if API fails
+        const fallbackModels = [
+          { name: "llama3-8b-instruct" },
+          { name: "mistral-7b-instruct" },
+          { name: "phi-3-mini-instruct" },
+          { name: "tinyllama-1.1b-chat" }
+        ];
+        setModels(fallbackModels);
+        form.setValue("modelName", fallbackModels[0].name);
       } finally {
-        setModelsLoading(false)
+        setModelsLoading(false);
       }
-    }
+    };
 
-    loadModels()
-  }, [fetchAvailableModels, form])
+    loadModels();
+  }, []); // Empty dependency array to run only once
 
   const onSubmit = async (data: GenerateFormValues) => {
     try {
@@ -142,8 +156,7 @@ export default function GeneratePage() {
                           <SelectContent>
                             <SelectItem value="policy">Policy</SelectItem>
                             <SelectItem value="procedure">Procedure</SelectItem>
-                            <SelectItem value="guideline">Guideline</SelectItem>
-                            <SelectItem value="summary">Summary</SelectItem>
+                            <SelectItem value="best practice">Best Practice</SelectItem>
                             <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
                         </Select>
@@ -161,7 +174,7 @@ export default function GeneratePage() {
                         <FormLabel>AI Model</FormLabel>
                         {modelsLoading ? (
                           <Skeleton className="h-10 w-full" />
-                        ) : (
+                        ) : models.length > 0 ? (
                           <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                             <FormControl>
                               <SelectTrigger>
@@ -169,19 +182,21 @@ export default function GeneratePage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {Array.isArray(models) && models.length > 0
-                                ? models.map((model) => (
-                                    <SelectItem key={model.name} value={model.name}>
-                                      {model.name}
-                                    </SelectItem>
-                                  ))
-                                : mockModels.map((model) => (
-                                    <SelectItem key={model.name} value={model.name}>
-                                      {model.name}
-                                    </SelectItem>
-                                  ))}
+                              {models.map((model) => (
+                                <SelectItem key={model.name} value={model.name}>
+                                  {model.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
+                        ) : (
+                          <Alert variant="destructive" className="mt-2">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>No models available</AlertTitle>
+                            <AlertDescription>
+                              Could not load AI models. Please try refreshing the page.
+                            </AlertDescription>
+                          </Alert>
                         )}
                         <FormDescription>Choose the AI model for content generation</FormDescription>
                         <FormMessage />
@@ -243,14 +258,17 @@ export default function GeneratePage() {
               </CardHeader>
               <CardContent className="pt-2">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-3">
+                  <TabsList className="grid w-full grid-cols-1">
                     <TabsTrigger value="content">Content</TabsTrigger>
+                    {/* Validation and Sources tabs hidden for now
                     <TabsTrigger value="validation">Validation</TabsTrigger>
                     <TabsTrigger value="sources">Sources</TabsTrigger>
+                    */}
                   </TabsList>
                   <TabsContent value="content" className="mt-4">
                     <div className="bg-muted p-4 rounded-md whitespace-pre-wrap">{generatedContent.generated_text}</div>
                   </TabsContent>
+                  {/* Validation tab content hidden for now
                   <TabsContent value="validation" className="mt-4">
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
@@ -282,6 +300,8 @@ export default function GeneratePage() {
                         )}
                     </div>
                   </TabsContent>
+                  */}
+                  {/* Sources tab content hidden for now
                   <TabsContent value="sources" className="mt-4">
                     {generatedContent.source_chunk_ids && generatedContent.source_chunk_ids.length > 0 ? (
                       <div className="space-y-4">
@@ -305,6 +325,7 @@ export default function GeneratePage() {
                       </div>
                     )}
                   </TabsContent>
+                  */}
                 </Tabs>
               </CardContent>
               <CardFooter className="flex justify-between border-t px-6 py-4">
