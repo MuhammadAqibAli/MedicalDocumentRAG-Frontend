@@ -18,12 +18,12 @@ export default function Home() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileUp className="h-5 w-5" />
-              Document Upload
+              Standard Upload
             </CardTitle>
-            <CardDescription>Upload medical documents in PDF or DOCX format</CardDescription>
+            <CardDescription>Upload standard documents in PDF or DOCX format</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-4">Securely upload your medical documents for processing and analysis.</p>
+            <p className="mb-4">Securely upload your standard documents for processing and analysis.</p>
             <Button asChild className="w-full">
               <Link href="/upload">Upload Documents</Link>
             </Button>
@@ -36,10 +36,10 @@ export default function Home() {
               <Sparkles className="h-5 w-5" />
               Content Generation
             </CardTitle>
-            <CardDescription>Generate medical content using AI models</CardDescription>
+            <CardDescription>Generate standard content using AI models</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-4">Create policies, procedures, and other medical content with AI assistance.</p>
+            <p className="mb-4">Create policies, procedures, and other standard content with AI assistance.</p>
             <Button asChild className="w-full">
               <Link href="/generate">Generate Content</Link>
             </Button>
