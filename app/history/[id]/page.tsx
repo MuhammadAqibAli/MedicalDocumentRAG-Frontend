@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -165,7 +165,7 @@ All patient encounters must be documented in the electronic health record accord
                 <CardDescription className="flex items-center gap-2 mt-2">
                   <Badge variant="outline">{content.contentType}</Badge>
                   <Badge variant="secondary">{content.modelName}</Badge>
-                  {content.validationResults.valid ? (
+                  {content?.validationResults?.valid ? (
                     <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       Valid
@@ -203,7 +203,7 @@ All patient encounters must be documented in the electronic health record accord
               <TabsContent value="validation" className="mt-4">
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    {content.validationResults.valid ? (
+                    {content.validationResults && content.validationResults.valid ? (
                       <Alert className="bg-green-50 border-green-200">
                         <CheckCircle2 className="h-4 w-4 text-green-600" />
                         <AlertTitle className="text-green-600">Valid Content</AlertTitle>
@@ -221,7 +221,7 @@ All patient encounters must be documented in the electronic health record accord
                     )}
                   </div>
 
-                  {content.validationResults.issues && content.validationResults.issues.length > 0 && (
+                  {content.validationResults && content.validationResults.issues && content.validationResults.issues.length > 0 && (
                     <div className="bg-muted p-4 rounded-md">
                       <h4 className="font-medium mb-2">Issues Found:</h4>
                       <ul className="list-disc pl-5 space-y-1">

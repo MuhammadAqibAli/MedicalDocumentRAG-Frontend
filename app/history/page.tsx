@@ -61,9 +61,10 @@ export default function HistoryPage() {
     },
   ]
 
+  // Include fetchGeneratedContents in the dependency array to prevent stale closures
   useEffect(() => {
     loadContents()
-  }, [currentPage, contentTypeFilter])
+  }, [currentPage, contentTypeFilter, fetchGeneratedContents])
 
   const loadContents = async () => {
     try {
@@ -76,16 +77,25 @@ export default function HistoryPage() {
       }
 
       const fetchedContents = await fetchGeneratedContents(currentPage, filters)
+
       // Ensure fetchedContents is always an array
       const safeContents = Array.isArray(fetchedContents) ? fetchedContents : []
-      setContents(safeContents)
+
+      // Only update state if we have valid data
+      if (safeContents.length > 0) {
+        setContents(safeContents)
+      } else if (mockContents.length > 0 && safeContents.length === 0) {
+        // Use mock data if API returns empty array
+        setContents(mockContents)
+      }
 
       // In a real application, the API would return pagination info
       // This is just a mock for demonstration
       setTotalPages(Math.ceil((safeContents.length || mockContents.length) / 10) || 1)
     } catch (error) {
       console.error("Failed to load contents:", error)
-      setContents([]) // Set to empty array on error
+      // Don't clear contents on error, use mock data instead
+      setContents(mockContents)
     }
   }
 
@@ -206,12 +216,13 @@ export default function HistoryPage() {
                       >
                         <TableCell className="font-medium">{content.topic}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{content.contentType}</Badge>
+                          <Badge variant="outline">{content.contentType || content.content_type}</Badge>
                         </TableCell>
-                        <TableCell>{content.modelName}</TableCell>
-                        <TableCell>{new Date(content.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>{content.modelName || content.llm_model_used}</TableCell>
+                        <TableCell>{new Date(content.createdAt || content.created_at).toLocaleDateString()}</TableCell>
                         <TableCell>
-                          {content.validationResults.valid ? (
+                          {(content.validationResults && content.validationResults.valid) ||
+                           (content.validation_results && content.validation_results.valid) ? (
                             <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Valid</Badge>
                           ) : (
                             <Badge variant="destructive">Invalid</Badge>

@@ -77,7 +77,7 @@ export default function GeneratePage() {
 
   const copyToClipboard = () => {
     if (generatedContent) {
-      navigator.clipboard.writeText(generatedContent.content)
+      navigator.clipboard.writeText(generatedContent.generated_text)
       alert("Content copied to clipboard")
     }
   }
@@ -227,8 +227,8 @@ export default function GeneratePage() {
                   <div>
                     <CardTitle>{generatedContent.topic}</CardTitle>
                     <CardDescription className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline">{generatedContent.contentType}</Badge>
-                      <Badge variant="secondary">{generatedContent.modelName}</Badge>
+                      <Badge variant="outline">{generatedContent.content_type}</Badge>
+                      <Badge variant="secondary">{generatedContent.llm_model_used}</Badge>
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
@@ -249,12 +249,12 @@ export default function GeneratePage() {
                     <TabsTrigger value="sources">Sources</TabsTrigger>
                   </TabsList>
                   <TabsContent value="content" className="mt-4">
-                    <div className="bg-muted p-4 rounded-md whitespace-pre-wrap">{generatedContent.content}</div>
+                    <div className="bg-muted p-4 rounded-md whitespace-pre-wrap">{generatedContent.generated_text}</div>
                   </TabsContent>
                   <TabsContent value="validation" className="mt-4">
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        {generatedContent.validationResults.valid ? (
+                        {generatedContent.validation_results?.valid ? (
                           <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Valid
@@ -267,12 +267,12 @@ export default function GeneratePage() {
                         )}
                       </div>
 
-                      {generatedContent.validationResults.issues &&
-                        generatedContent.validationResults.issues.length > 0 && (
+                      {generatedContent.validation_results?.issues &&
+                        generatedContent.validation_results?.issues.length > 0 && (
                           <div className="bg-muted p-4 rounded-md">
                             <h4 className="font-medium mb-2">Issues Found:</h4>
                             <ul className="list-disc pl-5 space-y-1">
-                              {generatedContent.validationResults.issues.map((issue, index) => (
+                              {generatedContent.validation_results?.issues.map((issue, index) => (
                                 <li key={index} className="text-sm">
                                   {issue}
                                 </li>
@@ -283,9 +283,9 @@ export default function GeneratePage() {
                     </div>
                   </TabsContent>
                   <TabsContent value="sources" className="mt-4">
-                    {generatedContent.sourceChunks && generatedContent.sourceChunks.length > 0 ? (
+                    {generatedContent.source_chunk_ids && generatedContent.source_chunk_ids.length > 0 ? (
                       <div className="space-y-4">
-                        {generatedContent.sourceChunks.map((chunk, index) => (
+                        {generatedContent.source_chunk_ids.map((chunk, index) => (
                           <div key={index} className="bg-muted p-4 rounded-md">
                             <div className="flex items-center gap-2 mb-2">
                               <FileText className="h-4 w-4" />
@@ -309,7 +309,7 @@ export default function GeneratePage() {
               </CardContent>
               <CardFooter className="flex justify-between border-t px-6 py-4">
                 <p className="text-sm text-muted-foreground">
-                  Generated on {new Date(generatedContent.createdAt).toLocaleString()}
+                  Generated on {new Date(generatedContent.created_at).toLocaleString()}
                 </p>
               </CardFooter>
             </Card>

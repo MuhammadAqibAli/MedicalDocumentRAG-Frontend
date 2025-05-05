@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import Navbar from "@/components/navbar"
 import { Toaster } from "@/components/ui/toaster"
 import { MedicalAssistantProvider } from "@/context/medical-assistant-context"
+import { FooterCopyright } from "@/components/footer-copyright"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -21,17 +22,15 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light">
           <MedicalAssistantProvider>
             <div className="min-h-screen flex flex-col">
               <Navbar />
               <main className="flex-1 container mx-auto py-6 px-4">{children}</main>
               <footer className="border-t py-4">
-                <div className="container mx-auto text-center text-sm text-muted-foreground">
-                  © {new Date().getFullYear()} Medical Assistant for New Zealand Healthcare Professionals
-                </div>
+                <FooterCopyright />
               </footer>
             </div>
             <Toaster />
