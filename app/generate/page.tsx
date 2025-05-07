@@ -16,12 +16,23 @@ import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Sparkles, AlertCircle, CheckCircle2, Download, Copy, FileText, Info } from "lucide-react"
+import { 
+  Sparkles, AlertCircle, CheckCircle2, Download, Copy, FileText, 
+  Info, Save, GitCompare, History 
+} from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+
+// Type imports for CKEditor
+import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import { CKEditor } from '@ckeditor/ckeditor5-react';
 
 interface GenerateFormValues {
   topic: string
   contentType: ContentType
+  author: string
+  generateUsingAI: "yes" | "no"
   modelName: string
 }
 
@@ -30,12 +41,18 @@ export default function GeneratePage() {
   const [models, setModels] = useState<Model[]>([])
   const [modelsLoading, setModelsLoading] = useState(true)
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null)
-  const [activeTab, setActiveTab] = useState("content")
+  const [editorContent, setEditorContent] = useState("")
+  const [compareDialogOpen, setCompareDialogOpen] = useState(false)
+  const [historyContent, setHistoryContent] = useState("")
+  const [savedContents, setSavedContents] = useState<{id: string, title: string, content: string, date: string}[]>([])
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
 
   const form = useForm<GenerateFormValues>({
     defaultValues: {
       topic: "",
       contentType: "policy",
+      author: "Dr. Smith",
+      generateUsingAI: "yes",
       modelName: "",
     },
   })
@@ -81,17 +98,22 @@ export default function GeneratePage() {
 
   const onSubmit = async (data: GenerateFormValues) => {
     try {
-      const content = await generateContent(data.topic, data.contentType, data.modelName)
-      setGeneratedContent(content)
-      setActiveTab("content")
+      if (data.generateUsingAI === "yes") {
+        const content = await generateContent(data.topic, data.contentType, data.modelName)
+        setGeneratedContent(content)
+        setEditorContent(content.generated_text)
+      } else {
+        // If not using AI, just create an empty editor for manual input
+        setEditorContent("")
+      }
     } catch (error) {
       console.error("Generation failed:", error)
     }
   }
 
   const copyToClipboard = () => {
-    if (generatedContent) {
-      navigator.clipboard.writeText(generatedContent.generated_text)
+    if (editorContent) {
+      navigator.clipboard.writeText(editorContent)
       alert("Content copied to clipboard")
     }
   }
@@ -101,15 +123,26 @@ export default function GeneratePage() {
     alert("PDF download functionality would be implemented here")
   }
 
-  // Mock models for demonstration
-  const mockModels: Model[] = [
-    { name: "gpt-4-medical", description: "Advanced medical content generation" },
-    { name: "med-llama", description: "Specialized for medical documentation" },
-    { name: "clinical-bert", description: "Focused on clinical terminology" },
-  ]
+  const saveContent = () => {
+    if (editorContent) {
+      const newContent = {
+        id: Date.now().toString(),
+        title: form.getValues().topic || "Untitled",
+        content: editorContent,
+        date: new Date().toLocaleString()
+      }
+      setSavedContents(prev => [...prev, newContent])
+      alert("Content saved successfully")
+    }
+  }
+
+  const selectHistoryContent = (content: string) => {
+    setHistoryContent(content)
+    setHistoryDialogOpen(false)
+  }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-full mx-auto">
       <h1 className="text-3xl font-bold mb-6">Content Generation</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -146,11 +179,11 @@ export default function GeneratePage() {
                     name="contentType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Content Type</FormLabel>
+                        <FormLabel>Document Type</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select content type" />
+                              <SelectValue placeholder="Select document type" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -168,41 +201,99 @@ export default function GeneratePage() {
 
                   <FormField
                     control={form.control}
-                    name="modelName"
+                    name="author"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>AI Model</FormLabel>
-                        {modelsLoading ? (
-                          <Skeleton className="h-10 w-full" />
-                        ) : models.length > 0 ? (
-                          <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select AI model" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {models.map((model) => (
-                                <SelectItem key={model.name} value={model.name}>
-                                  {model.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Alert variant="destructive" className="mt-2">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>No models available</AlertTitle>
-                            <AlertDescription>
-                              Could not load AI models. Please try refreshing the page.
-                            </AlertDescription>
-                          </Alert>
-                        )}
-                        <FormDescription>Choose the AI model for content generation</FormDescription>
+                        <FormLabel>Author</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select author" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Dr. Smith">Dr. Smith</SelectItem>
+                            <SelectItem value="Dr. Robert">Dr. Robert</SelectItem>
+                            <SelectItem value="Sarah William">Sarah William</SelectItem>
+                            <SelectItem value="Dr. Albert">Dr. Albert</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>Select the author of the document</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="generateUsingAI"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel>Generate Using AI</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex flex-row space-x-4"
+                          >
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="yes" />
+                              </FormControl>
+                              <FormLabel className="font-normal">YES</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="no" />
+                              </FormControl>
+                              <FormLabel className="font-normal">NO</FormLabel>
+                            </FormItem>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch("generateUsingAI") === "yes" && (
+                    <FormField
+                      control={form.control}
+                      name="modelName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>AI Model</FormLabel>
+                          {modelsLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                          ) : models.length > 0 ? (
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select AI model" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {models.map((model) => (
+                                  <SelectItem key={model.name} value={model.name}>
+                                    {model.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Alert variant="destructive" className="mt-2">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertTitle>No models available</AlertTitle>
+                              <AlertDescription>
+                                Could not load AI models. Please try refreshing the page.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                          <FormDescription>Choose the AI model for content generation</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   {error && (
                     <Alert variant="destructive">
@@ -235,15 +326,17 @@ export default function GeneratePage() {
                 <Skeleton className="h-4 w-3/4" />
               </CardContent>
             </Card>
-          ) : generatedContent ? (
-            <Card>
+          ) : (
+            <Card className="h-full">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle>{generatedContent.topic}</CardTitle>
+                    <CardTitle>{form.getValues().topic || "New Document"}</CardTitle>
                     <CardDescription className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline">{generatedContent.content_type}</Badge>
-                      <Badge variant="secondary">{generatedContent.llm_model_used}</Badge>
+                      <Badge variant="outline">{form.getValues().contentType}</Badge>
+                      {generatedContent && (
+                        <Badge variant="secondary">{generatedContent.llm_model_used}</Badge>
+                      )}
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
@@ -253,98 +346,136 @@ export default function GeneratePage() {
                     <Button variant="outline" size="icon" onClick={downloadAsPDF} title="Download as PDF">
                       <Download className="h-4 w-4" />
                     </Button>
+                    <Button variant="outline" size="icon" onClick={saveContent} title="Save content">
+                      <Save className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => setCompareDialogOpen(true)} 
+                      title="Compare with history"
+                    >
+                      <GitCompare className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-2">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-1">
-                    <TabsTrigger value="content">Content</TabsTrigger>
-                    {/* Validation and Sources tabs hidden for now
-                    <TabsTrigger value="validation">Validation</TabsTrigger>
-                    <TabsTrigger value="sources">Sources</TabsTrigger>
-                    */}
-                  </TabsList>
-                  <TabsContent value="content" className="mt-4">
-                    <div className="bg-muted p-4 rounded-md whitespace-pre-wrap">{generatedContent.generated_text}</div>
-                  </TabsContent>
-                  {/* Validation tab content hidden for now
-                  <TabsContent value="validation" className="mt-4">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        {generatedContent.validation_results?.valid ? (
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Valid
-                          </Badge>
-                        ) : (
-                          <Badge variant="destructive">
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            Invalid
-                          </Badge>
-                        )}
-                      </div>
-
-                      {generatedContent.validation_results?.issues &&
-                        generatedContent.validation_results?.issues.length > 0 && (
-                          <div className="bg-muted p-4 rounded-md">
-                            <h4 className="font-medium mb-2">Issues Found:</h4>
-                            <ul className="list-disc pl-5 space-y-1">
-                              {generatedContent.validation_results?.issues.map((issue, index) => (
-                                <li key={index} className="text-sm">
-                                  {issue}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                    </div>
-                  </TabsContent>
-                  */}
-                  {/* Sources tab content hidden for now
-                  <TabsContent value="sources" className="mt-4">
-                    {generatedContent.source_chunk_ids && generatedContent.source_chunk_ids.length > 0 ? (
-                      <div className="space-y-4">
-                        {generatedContent.source_chunk_ids.map((chunk, index) => (
-                          <div key={index} className="bg-muted p-4 rounded-md">
-                            <div className="flex items-center gap-2 mb-2">
-                              <FileText className="h-4 w-4" />
-                              <span className="font-medium">{chunk.source}</span>
-                            </div>
-                            <p className="text-sm whitespace-pre-wrap">{chunk.text}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-8 text-center">
-                        <Info className="h-8 w-8 text-muted-foreground mb-2" />
-                        <h3 className="font-medium">No source information available</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          This content was generated without using retrieval-augmented generation.
-                        </p>
-                      </div>
-                    )}
-                  </TabsContent>
-                  */}
-                </Tabs>
+              <CardContent className="pt-2 h-[calc(100%-80px)]">
+                <div className="h-full">
+                  <CKEditor
+                    editor={ClassicEditor}
+                    data={editorContent}
+                    onChange={(event, editor) => {
+                      const data = editor.getData();
+                      setEditorContent(data);
+                    }}
+                    config={{
+                      toolbar: ['heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', '|', 'outdent', 'indent', '|', 'blockQuote', 'insertTable', 'undo', 'redo'],
+                      height: '500px'
+                    }}
+                  />
+                </div>
               </CardContent>
               <CardFooter className="flex justify-between border-t px-6 py-4">
                 <p className="text-sm text-muted-foreground">
-                  Generated on {new Date(generatedContent.created_at).toLocaleString()}
+                  {generatedContent ? 
+                    `Generated on ${new Date(generatedContent.created_at).toLocaleString()}` : 
+                    "New document"}
                 </p>
               </CardFooter>
             </Card>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full py-12 px-4 bg-muted rounded-lg text-center">
-              <Sparkles className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-medium mb-2">Generate Medical Content</h3>
-              <p className="text-muted-foreground max-w-md">
-                Fill out the form to generate medical content using AI models. The generated content will appear here.
-              </p>
-            </div>
           )}
         </div>
       </div>
+
+      {/* Compare Dialog */}
+      <Dialog open={compareDialogOpen} onOpenChange={setCompareDialogOpen}>
+        <DialogContent className="max-w-6xl">
+          <DialogHeader>
+            <DialogTitle>Compare Documents</DialogTitle>
+            <DialogDescription>
+              Compare current document with a previously saved version
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div>
+              <h3 className="text-sm font-medium mb-2">Current Document</h3>
+              <div className="border rounded-md p-2 h-[400px] overflow-auto">
+                <CKEditor
+                  editor={ClassicEditor}
+                  data={editorContent}
+                  disabled={true}
+                  config={{
+                    toolbar: [],
+                    height: '380px'
+                  }}
+                />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-sm font-medium">Historical Document</h3>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setHistoryDialogOpen(true)}
+                  className="flex items-center gap-1"
+                >
+                  <History className="h-4 w-4" />
+                  Select from History
+                </Button>
+              </div>
+              <div className="border rounded-md p-2 h-[400px] overflow-auto">
+                <CKEditor
+                  editor={ClassicEditor}
+                  data={historyContent}
+                  disabled={true}
+                  config={{
+                    toolbar: [],
+                    height: '380px'
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* History Selection Dialog */}
+      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Historical Document</DialogTitle>
+            <DialogDescription>
+              Choose a previously saved document to compare
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 max-h-[400px] overflow-y-auto">
+            {savedContents.length > 0 ? (
+              <div className="space-y-2">
+                {savedContents.map((item) => (
+                  <div 
+                    key={item.id} 
+                    className="border rounded-md p-3 cursor-pointer hover:bg-muted"
+                    onClick={() => selectHistoryContent(item.content)}
+                  >
+                    <div className="font-medium">{item.title}</div>
+                    <div className="text-sm text-muted-foreground">{item.date}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Info className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <h3 className="font-medium">No saved documents</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Save some documents first to enable comparison.
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
