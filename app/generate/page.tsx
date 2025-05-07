@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useForm } from "react-hook-form"
 import {
   useMedicalAssistant,
@@ -18,11 +18,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { 
   Sparkles, AlertCircle, CheckCircle2, Download, Copy, FileText, 
-  Info, Save, GitCompare, History 
+  Info, Save, GitCompare, History, Search 
 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import axios from "axios"
+import { jsPDF } from "jspdf"
+import html2canvas from "html2canvas"
 
 // Type imports for CKEditor
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
@@ -36,6 +39,14 @@ interface GenerateFormValues {
   modelName: string
 }
 
+interface DocumentItem {
+  id: string
+  title: string
+  contentType: ContentType
+  createdAt: string
+  content: string
+}
+
 export default function GeneratePage() {
   const { generateContent, fetchAvailableModels, isLoading, error } = useMedicalAssistant()
   const [models, setModels] = useState<Model[]>([])
@@ -46,6 +57,12 @@ export default function GeneratePage() {
   const [historyContent, setHistoryContent] = useState("")
   const [savedContents, setSavedContents] = useState<{id: string, title: string, content: string, date: string}[]>([])
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [documents, setDocuments] = useState<DocumentItem[]>([])
+  const [documentsLoading, setDocumentsLoading] = useState(false)
+  const editorRef = useRef<any>(null)
+  const editorContainerRef = useRef<HTMLDivElement>(null)
+  const [documentSelectionDialogOpen, setDocumentSelectionDialogOpen] = useState(false)
 
   const form = useForm<GenerateFormValues>({
     defaultValues: {
@@ -96,6 +113,61 @@ export default function GeneratePage() {
     loadModels();
   }, []); // Empty dependency array to run only once
 
+  // Watch for content type changes to fetch documents of that type
+  useEffect(() => {
+    const contentType = form.watch("contentType");
+    fetchDocumentsByType(contentType);
+  }, [form.watch("contentType")]);
+
+  const fetchDocumentsByType = async (contentType: ContentType) => {
+    setDocumentsLoading(true);
+    try {
+      // In a real application, this would be an API call
+      // For now, we'll simulate it with a timeout
+      setTimeout(() => {
+        // Mock data for demonstration
+        const mockDocuments: DocumentItem[] = [
+          { 
+            id: "1", 
+            title: "Diabetes Management Protocol", 
+            contentType: contentType, 
+            createdAt: new Date().toISOString(),
+            content: "<p>Diabetes management protocol content...</p>"
+          },
+          { 
+            id: "2", 
+            title: "Hypertension Guidelines", 
+            contentType: contentType, 
+            createdAt: new Date().toISOString(),
+            content: "<p>Hypertension guidelines content...</p>"
+          },
+          { 
+            id: "3", 
+            title: "Asthma Treatment Plan", 
+            contentType: contentType, 
+            createdAt: new Date().toISOString(),
+            content: "<p>Asthma treatment plan content...</p>"
+          }
+        ];
+        setDocuments(mockDocuments);
+        setDocumentsLoading(false);
+      }, 500);
+
+      // Uncomment for real API implementation
+      /*
+      const response = await axios.get(`/api/documents`, {
+        params: { contentType }
+      });
+      setDocuments(response.data);
+      */
+    } catch (error) {
+      console.error("Failed to fetch documents:", error);
+      setDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
   const onSubmit = async (data: GenerateFormValues) => {
     try {
       if (data.generateUsingAI === "yes") {
@@ -118,21 +190,104 @@ export default function GeneratePage() {
     }
   }
 
-  const downloadAsPDF = () => {
-    // In a real application, this would generate a PDF
-    alert("PDF download functionality would be implemented here")
+  const downloadAsPDF = async () => {
+    if (!editorContent) {
+      alert("No content to download");
+      return;
+    }
+
+    try {
+      // Create a temporary div to render the HTML content
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = editorContent;
+      tempDiv.style.width = '700px';
+      tempDiv.style.padding = '20px';
+      document.body.appendChild(tempDiv);
+
+      // Use html2canvas to capture the rendered content
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        logging: false,
+        useCORS: true
+      });
+      
+      // Remove the temporary div
+      document.body.removeChild(tempDiv);
+
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Calculate dimensions to fit the canvas in A4
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // Add the image to the PDF
+      pdf.addImage(
+        canvas.toDataURL('image/png'), 
+        'PNG', 
+        0, 
+        0, 
+        imgWidth, 
+        imgHeight
+      );
+
+      // Save the PDF
+      const fileName = `${form.getValues().topic || 'document'}.pdf`;
+      pdf.save(fileName);
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      alert("Failed to generate PDF. Please try again.");
+    }
   }
 
-  const saveContent = () => {
-    if (editorContent) {
-      const newContent = {
-        id: Date.now().toString(),
+  const saveContent = async () => {
+    if (!editorContent) {
+      alert("No content to save");
+      return;
+    }
+
+    try {
+      // In a real application, this would be an API call
+      // For now, we'll simulate it with a timeout
+      const documentData = {
         title: form.getValues().topic || "Untitled",
+        contentType: form.getValues().contentType,
+        author: form.getValues().author,
         content: editorContent,
-        date: new Date().toLocaleString()
-      }
-      setSavedContents(prev => [...prev, newContent])
-      alert("Content saved successfully")
+      };
+
+      // Simulate API call
+      setTimeout(() => {
+        const newContent = {
+          id: Date.now().toString(),
+          title: documentData.title,
+          content: documentData.content,
+          date: new Date().toLocaleString()
+        };
+        setSavedContents(prev => [...prev, newContent]);
+        alert("Content saved successfully");
+      }, 500);
+
+      // Uncomment for real API implementation
+      /*
+      const response = await axios.post('/api/documents', documentData);
+      const savedDocument = response.data;
+      
+      const newContent = {
+        id: savedDocument.id,
+        title: savedDocument.title,
+        content: savedDocument.content,
+        date: new Date(savedDocument.createdAt).toLocaleString()
+      };
+      setSavedContents(prev => [...prev, newContent]);
+      */
+    } catch (error) {
+      console.error("Failed to save document:", error);
+      alert("Failed to save document. Please try again.");
     }
   }
 
@@ -141,13 +296,22 @@ export default function GeneratePage() {
     setHistoryDialogOpen(false)
   }
 
+  const handleDocumentSelect = (document: DocumentItem) => {
+    form.setValue("topic", document.title);
+    setEditorContent(document.content);
+  }
+
+  const filteredDocuments = documents.filter(doc => 
+    doc.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="max-w-full mx-auto">
       <h1 className="text-3xl font-bold mb-6">Content Generation</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
-          <Card>
+          <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5" />
@@ -418,7 +582,7 @@ export default function GeneratePage() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => setHistoryDialogOpen(true)}
+                  onClick={() => setDocumentSelectionDialogOpen(true)}
                   className="flex items-center gap-1"
                 >
                   <History className="h-4 w-4" />
@@ -465,14 +629,74 @@ export default function GeneratePage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <Info className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <h3 className="font-medium">No saved documents</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Save some documents first to enable comparison.
-                </p>
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">No documents available</p>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Selection Dialog */}
+      <Dialog open={documentSelectionDialogOpen} onOpenChange={setDocumentSelectionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Existing Documents
+            </DialogTitle>
+            <DialogDescription>
+              Browse existing {form.watch("contentType")} documents
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search documents..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <div className="border rounded-md">
+              {documentsLoading ? (
+                <div className="p-4 space-y-3">
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-full" />
+                </div>
+              ) : filteredDocuments.length > 0 ? (
+                <div className="max-h-[300px] overflow-y-auto">
+                  {filteredDocuments.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="p-3 border-b last:border-b-0 hover:bg-muted cursor-pointer"
+                      onClick={() => {
+                        handleDocumentSelect(doc);
+                        setDocumentSelectionDialogOpen(false);
+                        setHistoryContent(doc.content);
+                        setHistoryDialogOpen(false);
+                      }}
+                    >
+                      <div className="font-medium">{doc.title}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(doc.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Info className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <h3 className="font-medium">No saved documents</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Save some documents first to enable comparison.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
