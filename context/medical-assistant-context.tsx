@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useContext, useState, type ReactNode, useEffect } from "react"
 import axios from "axios"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -12,6 +12,11 @@ export interface Document {
   filename: string
   type: DocumentType
   uploadedAt: string
+}
+
+export interface StandardType {
+  id: string
+  name: string
 }
 
 export type ContentType = "policy" | "procedure" | "guideline" | "summary" | "other"
@@ -45,6 +50,28 @@ export interface GeneratedContent {
   validationResults?: ValidationResult // Frontend property (derived from validation_results)
   source_chunk_ids?: SourceChunk[]
   sourceChunks?: SourceChunk[] // Frontend property (derived from source_chunk_ids)
+}
+
+export interface StandardData {
+  standard_title: string;
+  standard_type: string;
+  content: string;
+  version: string;
+  generated_content: string | null;
+}
+
+export interface SavedStandard {
+  id: string;
+  standard_title: string;
+  standard_type: string;
+  standard_type_name: string;
+  content: string;
+  version: string;
+  generated_content: string | null;
+  llm_model_used: string | null;
+  is_ai_generated: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // Helper function to convert API response to frontend format
@@ -122,6 +149,7 @@ interface MedicalAssistantContextType {
   documents: Document[]
   generatedContents: GeneratedContent[]
   availableModels: Model[]
+  standardTypes: StandardType[]
   isLoading: boolean
   error: string | null
 
@@ -129,8 +157,10 @@ interface MedicalAssistantContextType {
   uploadDocument: (file: File, documentType: DocumentType) => Promise<Document>
   generateContent: (topic: string, contentType: ContentType, modelName: string) => Promise<GeneratedContent>
   fetchAvailableModels: () => Promise<Model[]>
+  fetchStandardTypes: () => Promise<StandardType[]>
   fetchGeneratedContents: (page?: number, filters?: Record<string, any>) => Promise<GeneratedContent[]>
   fetchGeneratedContentById: (id: string) => Promise<GeneratedContent>
+  saveStandard: (standardData: StandardData) => Promise<SavedStandard>
   clearError: () => void
 }
 
@@ -140,6 +170,7 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
   const [documents, setDocuments] = useState<Document[]>([])
   const [generatedContents, setGeneratedContents] = useState<GeneratedContent[]>([])
   const [availableModels, setAvailableModels] = useState<Model[]>([])
+  const [standardTypes, setStandardTypes] = useState<StandardType[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
@@ -392,6 +423,67 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
         throw new Error("Failed to fetch content details. Please try again.")
       }
     },
+
+    async fetchStandardTypes(): Promise<StandardType[]> {
+      try {
+        const response = await axios.get<{ results: StandardType[] }>(`${api.baseUrl}/standard-types/`, {
+          timeout: 10000, // 10 seconds timeout
+        });
+        
+        console.log("API response for standard types:", response.data);
+        
+        // Check if response has results array
+        if (response.data && response.data.results && Array.isArray(response.data.results) && response.data.results.length > 0) {
+          return response.data.results;
+        }
+        
+        // If response is not valid, return fallback types
+        return [
+          { id: "policy", name: "Policy" },
+          { id: "procedure", name: "Procedure" },
+          { id: "guideline", name: "Guideline" },
+          { id: "form", name: "Form" },
+          { id: "other", name: "Other" }
+        ];
+      } catch (error) {
+        console.error("Error fetching standard types:", error);
+        // Return fallback types instead of throwing
+        return [
+          { id: "policy", name: "Policy" },
+          { id: "procedure", name: "Procedure" },
+          { id: "guideline", name: "Guideline" },
+          { id: "form", name: "Form" },
+          { id: "other", name: "Other" }
+        ];
+      }
+    },
+
+    async saveStandard(standardData: StandardData): Promise<SavedStandard> {
+      try {
+        const response = await axios.post<SavedStandard>(`${api.baseUrl}/standards/`, standardData, {
+          timeout: 30000, // 30 seconds timeout
+        });
+        
+        return response.data;
+      } catch (error) {
+        console.error("Error saving standard:", error);
+        if (axios.isAxiosError(error)) {
+          if (error.code === 'ECONNABORTED') {
+            throw new Error("Request timed out. Please try again.");
+          }
+          if (error.response) {
+            if (error.response.status === 400) {
+              throw new Error(`Validation error: ${JSON.stringify(error.response.data)}`);
+            } else if (error.response.status >= 500) {
+              throw new Error("Server error. Please try again later.");
+            }
+          } else if (error.request) {
+            throw new Error("No response from server. Please check your connection and try again.");
+          }
+        }
+        throw new Error("Failed to save standard. Please try again.");
+      }
+    },
   }
 
   const uploadDocument = async (file: File, documentType: DocumentType): Promise<Document> => {
@@ -554,6 +646,60 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
     }
   }
 
+  const fetchStandardTypes = async (): Promise<StandardType[]> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const types = await api.fetchStandardTypes();
+      setStandardTypes(types);
+      return types;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(errorMessage);
+      toast({
+        title: "Failed to fetch document types",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveStandard = async (standardData: StandardData): Promise<SavedStandard> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const savedStandard = await api.saveStandard(standardData);
+      toast({
+        title: "Standard saved successfully",
+        description: `"${savedStandard.standard_title}" has been saved.`,
+      });
+      return savedStandard;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(errorMessage);
+      toast({
+        title: "Failed to save standard",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load standard types on context initialization
+  useEffect(() => {
+    fetchStandardTypes().catch(err => 
+      console.error("Failed to load standard types during initialization:", err)
+    );
+  }, []);
+
   const clearError = () => {
     setError(null)
   }
@@ -562,13 +708,16 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
     documents,
     generatedContents,
     availableModels,
+    standardTypes,
     isLoading,
     error,
     uploadDocument,
     generateContent,
     fetchAvailableModels,
+    fetchStandardTypes,
     fetchGeneratedContents,
     fetchGeneratedContentById,
+    saveStandard,
     clearError,
   }
 

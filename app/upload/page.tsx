@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { useMedicalAssistant, type DocumentType } from "@/context/medical-assistant-context"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { FileUp, AlertCircle, CheckCircle2, FileText } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface UploadFormValues {
   documentType: DocumentType
@@ -101,15 +102,15 @@ export default function UploadPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Document Upload</h1>
+      <h1 className="text-3xl font-bold mb-6">Standard Upload</h1>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileUp className="h-5 w-5" />
-            Upload Medical Document
+            Upload Standard Document
           </CardTitle>
-          <CardDescription>Upload medical documents in PDF or DOCX format for processing</CardDescription>
+          <CardDescription>Upload standard documents in PDF or DOCX format for processing</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -117,27 +118,58 @@ export default function UploadPage() {
               <FormField
                 control={form.control}
                 name="documentType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Document Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select document type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="policy">Policy</SelectItem>
-                        <SelectItem value="procedure">Procedure</SelectItem>
-                        <SelectItem value="guideline">Guideline</SelectItem>
-                        <SelectItem value="form">Form</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>Select the type of document you are uploading</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const { standardTypes, fetchStandardTypes, isLoading: contextLoading } = useMedicalAssistant();
+                  const [typesLoading, setTypesLoading] = useState(true);
+                  
+                  useEffect(() => {
+                    const loadTypes = async () => {
+                      setTypesLoading(true);
+                      try {
+                        // If types are already loaded in context, use them
+                        if (standardTypes.length === 0) {
+                          await fetchStandardTypes();
+                        }
+                        // Set the first type as default if available and not already set
+                        if (standardTypes.length > 0 && !field.value) {
+                          field.onChange(standardTypes[0].id);
+                        }
+                      } catch (error) {
+                        console.error("Failed to fetch standard types:", error);
+                      } finally {
+                        setTypesLoading(false);
+                      }
+                    };
+                    
+                    loadTypes();
+                  }, [fetchStandardTypes, standardTypes.length]);
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>Standard Type</FormLabel>
+                      {typesLoading ? (
+                        <Skeleton className="h-10 w-full" />
+                      ) : (
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select standard type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {standardTypes.map((type) => (
+                              <SelectItem key={type.id} value={type.id}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <FormDescription>Select the type of standard you are uploading</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormItem>

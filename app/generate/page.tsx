@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import axios from "axios"
 import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
+import { useToast } from "@/hooks/use-toast"
 
 // Type imports for CKEditor
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
@@ -48,7 +49,17 @@ interface DocumentItem {
 }
 
 export default function GeneratePage() {
-  const { generateContent, fetchAvailableModels, isLoading, error } = useMedicalAssistant()
+  const { 
+    generateContent, 
+    fetchAvailableModels, 
+    isLoading: contextLoading, 
+    error, 
+    saveStandard ,
+    standardTypes,
+    fetchStandardTypes,
+    isLoading
+  } = useMedicalAssistant();
+  const { toast } = useToast();
   const [models, setModels] = useState<Model[]>([])
   const [modelsLoading, setModelsLoading] = useState(true)
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null)
@@ -251,43 +262,40 @@ export default function GeneratePage() {
     }
 
     try {
-      // In a real application, this would be an API call
-      // For now, we'll simulate it with a timeout
-      const documentData = {
-        title: form.getValues().topic || "Untitled",
-        contentType: form.getValues().contentType,
-        author: form.getValues().author,
+      // Prepare the data for the API
+      const standardData = {
+        standard_title: form.getValues().topic || "Untitled",
+        standard_type: form.getValues().contentType,
         content: editorContent,
+        version: "1.0",
+        generated_content: generatedContent ? generatedContent.id : null
       };
 
-      // Simulate API call
-      setTimeout(() => {
-        const newContent = {
-          id: Date.now().toString(),
-          title: documentData.title,
-          content: documentData.content,
-          date: new Date().toLocaleString()
-        };
-        setSavedContents(prev => [...prev, newContent]);
-        alert("Content saved successfully");
-      }, 500);
+      console.log("Saving standard with data:", standardData);
+      //console.log("Available methods:", Object.keys(useMedicalAssistant()));
 
-      // Uncomment for real API implementation
-      /*
-      const response = await axios.post('/api/documents', documentData);
-      const savedDocument = response.data;
+      // Call the API through the context
+      const savedStandard = await saveStandard(standardData);
       
+      // Update the local state with the saved content
       const newContent = {
-        id: savedDocument.id,
-        title: savedDocument.title,
-        content: savedDocument.content,
-        date: new Date(savedDocument.createdAt).toLocaleString()
+        id: savedStandard.id,
+        title: savedStandard.standard_title,
+        content: savedStandard.content,
+        date: new Date(savedStandard.created_at).toLocaleString()
       };
+      
       setSavedContents(prev => [...prev, newContent]);
-      */
+      
+      // Show success message
+      toast({
+        title: "Content saved successfully",
+        description: `"${savedStandard.standard_title}" has been saved.`,
+      });
+      
     } catch (error) {
-      console.error("Failed to save document:", error);
-      alert("Failed to save document. Please try again.");
+      console.error("Failed to save standard:", error);
+      // Error is already handled by the context with toast notifications
     }
   }
 
@@ -341,26 +349,58 @@ export default function GeneratePage() {
                   <FormField
                     control={form.control}
                     name="contentType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Document Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select document type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="policy">Policy</SelectItem>
-                            <SelectItem value="procedure">Procedure</SelectItem>
-                            <SelectItem value="best practice">Best Practice</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>Select the type of content to generate</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      //const { standardTypes, fetchStandardTypes, isLoading: contextLoading } = useMedicalAssistant();
+                      const [typesLoading, setTypesLoading] = useState(true);
+                      
+                      useEffect(() => {
+                        const loadTypes = async () => {
+                          setTypesLoading(true);
+                          try {
+                            // If types are already loaded in context, use them
+                            if (standardTypes.length === 0) {
+                              await fetchStandardTypes();
+                            }
+                            // Set the first type as default if available and not already set
+                            if (standardTypes.length > 0 && !field.value) {
+                              field.onChange(standardTypes[0].id);
+                            }
+                          } catch (error) {
+                            console.error("Failed to fetch standard types:", error);
+                          } finally {
+                            setTypesLoading(false);
+                          }
+                        };
+                        
+                        loadTypes();
+                      }, [fetchStandardTypes, standardTypes.length]);
+                      
+                      return (
+                        <FormItem>
+                          <FormLabel>Standard Type</FormLabel>
+                          {typesLoading ? (
+                            <Skeleton className="h-10 w-full" />
+                          ) : (
+                            <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select standard type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {standardTypes.map((type) => (
+                                  <SelectItem key={type.id} value={type.id}>
+                                    {type.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <FormDescription>Select the type of content to generate</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
 
                   <FormField

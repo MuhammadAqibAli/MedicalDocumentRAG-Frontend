@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { FileText, FileUp, History, Menu, Sparkles } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useState } from "react"
@@ -35,7 +36,8 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl">
             <FileText className="h-6 w-6" />
-            <span>Medical Assistant</span>
+            <span>MMC AI</span>
+            <Badge variant="outline" className="text-xs font-normal py-0 h-5">Beta</Badge>
           </Link>
         </div>
 

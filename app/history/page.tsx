@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useMedicalAssistant, type ContentType, type GeneratedContent } from "@/context/medical-assistant-context"
+import { useMedicalAssistant, type ContentType, type GeneratedContent, type SavedStandard } from "@/context/medical-assistant-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,416 +12,201 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FileText, AlertCircle, Search } from "lucide-react"
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
+import axios from "axios"
 
 export default function HistoryPage() {
   const router = useRouter()
-  const { fetchGeneratedContents, fetchGeneratedContentById, isLoading, error } = useMedicalAssistant()
-  const [contents, setContents] = useState<GeneratedContent[]>([])
-  const [bestPractices, setBestPractices] = useState<GeneratedContent[]>([])
-  const [policies, setPolicies] = useState<GeneratedContent[]>([])
-  const [others, setOthers] = useState<GeneratedContent[]>([])
-  const [searchTermBestPractices, setSearchTermBestPractices] = useState("")
-  const [searchTermPolicies, setSearchTermPolicies] = useState("")
-  const [searchTermOthers, setSearchTermOthers] = useState("")
+  const { isLoading: contextLoading, error: contextError } = useMedicalAssistant()
+  const [standards, setStandards] = useState<SavedStandard[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [selectedContent, setSelectedContent] = useState<GeneratedContent | null>(null)
-  const [activeTab, setActiveTab] = useState("bestPractices")
+  const [selectedStandard, setSelectedStandard] = useState<SavedStandard | null>(null)
+  const [activeTab, setActiveTab] = useState("bestPractice")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadContents()
-  }, [currentPage])
+  // Define tab configurations
+  const tabs = [
+    { id: "bestPractice", label: "Best Practice", typeId: "eb3c02c3-f39a-4547-92c5-5c78e39aa82f" },
+    { id: "policy", label: "Policy", typeId: "5ef182ec-5541-44f0-b2eb-46460184ac54" },
+    { id: "procedure", label: "Procedure", typeId: "457e7f33-a192-4f8e-9fa1-0553392ddc2c" },
+    { id: "standingOrder", label: "Standing Order", typeId: "91a641b1-2092-4d5c-8c3e-a4f9f4518d6a" }
+  ]
 
-  const loadContents = async () => {
+  // Get the current tab's type ID
+  const getCurrentTypeId = () => {
+    const currentTab = tabs.find(tab => tab.id === activeTab)
+    return currentTab ? currentTab.typeId : tabs[0].typeId
+  }
+
+  // Fetch standards based on the selected tab
+  const fetchStandards = async (typeId: string) => {
+    setIsLoading(true)
+    setError(null)
+
     try {
-      const fetchedContents = await fetchGeneratedContents(currentPage, {})
-
-      // Ensure fetchedContents is always an array
-      const safeContents = Array.isArray(fetchedContents) ? fetchedContents : []
-      setContents(safeContents)
-
-      // Filter contents by type
-      const bestPracticesDocs = safeContents.filter(content => content.content_type === "guideline")
-      const policyDocs = safeContents.filter(content => content.content_type === "policy")
-      const otherDocs = safeContents.filter(content => 
-        content.content_type !== "guideline" && content.content_type !== "policy"
-      )
-
-      setBestPractices(bestPracticesDocs)
-      setPolicies(policyDocs)
-      setOthers(otherDocs)
-
-      // Set total pages
-      setTotalPages(Math.ceil(safeContents.length / 10) || 1)
+      const response = await axios.get(`http://127.0.0.1:8000/api/standards/?standard_type_id=${typeId}`)
       
-      // Select first item if available
-      if (bestPracticesDocs.length > 0 && activeTab === "bestPractices") {
-        selectDocument(bestPracticesDocs[0].id)
-      } else if (policyDocs.length > 0 && activeTab === "policies") {
-        selectDocument(policyDocs[0].id)
-      } else if (otherDocs.length > 0 && activeTab === "others") {
-        selectDocument(otherDocs[0].id)
+      if (Array.isArray(response.data)) {
+        setStandards(response.data)
+        setTotalPages(Math.ceil(response.data.length / 10) || 1)
+        
+        // Select first item if available
+        if (response.data.length > 0) {
+          setSelectedStandard(response.data[0])
+        } else {
+          setSelectedStandard(null)
+        }
+      } else {
+        setStandards([])
+        setSelectedStandard(null)
       }
-    } catch (error) {
-      console.error("Failed to load contents:", error)
-      setContents([])
+    } catch (err) {
+      console.error("Failed to fetch standards:", err)
+      setError("Failed to load standards. Please try again later.")
+      setStandards([])
+      setSelectedStandard(null)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const selectDocument = async (id: string) => {
-    try {
-      const content = await fetchGeneratedContentById(id)
-      setSelectedContent(content)
-    } catch (error) {
-      console.error("Failed to load content:", error)
-    }
-  }
+  // Load standards when tab changes or on initial load
+  useEffect(() => {
+    const typeId = getCurrentTypeId()
+    fetchStandards(typeId)
+  }, [activeTab])
 
   const handleTabChange = (value: string) => {
     setActiveTab(value)
-    
-    // Select first item in the new tab if available
-    if (value === "bestPractices" && bestPractices.length > 0) {
-      selectDocument(bestPractices[0].id)
-    } else if (value === "policies" && policies.length > 0) {
-      selectDocument(policies[0].id)
-    } else if (value === "others" && others.length > 0) {
-      selectDocument(others[0].id)
-    } else {
-      setSelectedContent(null)
-    }
+    setSearchTerm("")
   }
 
-  // Filter functions for search
-  const filteredBestPractices = bestPractices.filter(doc => 
-    doc.topic.toLowerCase().includes(searchTermBestPractices.toLowerCase())
-  )
-  
-  const filteredPolicies = policies.filter(doc => 
-    doc.topic.toLowerCase().includes(searchTermPolicies.toLowerCase())
-  )
-  
-  const filteredOthers = others.filter(doc => 
-    doc.topic.toLowerCase().includes(searchTermOthers.toLowerCase())
+  const selectStandard = (standard: SavedStandard) => {
+    setSelectedStandard(standard)
+  }
+
+  // Filter standards based on search term
+  const filteredStandards = standards.filter(standard => 
+    standard.standard_title.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
     <div className="w-full px-4">
-      <h1 className="text-3xl font-bold mb-6">Generated Content History</h1>
+      <h1 className="text-3xl font-bold mb-6">Standards Library</h1>
 
-      {error && (
+      {(error || contextError) && (
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error || contextError}</AlertDescription>
         </Alert>
       )}
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="bestPractices">Best Practices</TabsTrigger>
-          <TabsTrigger value="policies">Policies</TabsTrigger>
-          <TabsTrigger value="others">Others</TabsTrigger>
+          {tabs.map(tab => (
+            <TabsTrigger key={tab.id} value={tab.id}>{tab.label}</TabsTrigger>
+          ))}
         </TabsList>
         
-        {/* Best Practices Tab */}
-        <TabsContent value="bestPractices">
-          <div className="grid grid-cols-4 gap-6">
-            <div className="col-span-1">
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Search best practices..."
-                    className="pl-8"
-                    value={searchTermBestPractices}
-                    onChange={(e) => setSearchTermBestPractices(e.target.value)}
-                  />
+        {tabs.map(tab => (
+          <TabsContent key={tab.id} value={tab.id}>
+            <div className="grid grid-cols-4 gap-6">
+              <div className="col-span-1">
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder={`Search ${tab.label}...`}
+                      className="pl-8"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
                 </div>
+                
+                {isLoading || contextLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center space-x-4">
+                        <Skeleton className="h-12 w-12 rounded-full" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-[250px]" />
+                          <Skeleton className="h-4 w-[200px]" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : filteredStandards.length > 0 ? (
+                  <div className="space-y-2 max-h-[calc(100vh-220px)] overflow-y-auto">
+                    {filteredStandards.map((standard) => (
+                      <div
+                        key={standard.id}
+                        className={`p-3 border rounded-md cursor-pointer hover:bg-muted ${
+                          selectedStandard?.id === standard.id ? "bg-muted" : ""
+                        }`}
+                        onClick={() => selectStandard(standard)}
+                      >
+                        <div className="font-medium">{standard.standard_title}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Badge variant="outline">{standard.standard_type_name}</Badge>
+                          {new Date(standard.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border rounded-md">
+                    <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                    <h3 className="text-lg font-medium">No {tab.label} standards found</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Try adjusting your search or create new content
+                    </p>
+                  </div>
+                )}
               </div>
               
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center space-x-4">
-                      <Skeleton className="h-12 w-12 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-[250px]" />
-                        <Skeleton className="h-4 w-[200px]" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : filteredBestPractices.length > 0 ? (
-                <div className="space-y-2 max-h-[calc(100vh-220px)] overflow-y-auto">
-                  {filteredBestPractices.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className={`p-3 border rounded-md cursor-pointer hover:bg-muted ${
-                        selectedContent?.id === doc.id ? "bg-muted" : ""
-                      }`}
-                      onClick={() => selectDocument(doc.id)}
-                    >
-                      <div className="font-medium">{doc.topic}</div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Badge variant="outline">{doc.content_type}</Badge>
-                        {new Date(doc.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 border rounded-md">
-                  <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <h3 className="text-lg font-medium">No best practices found</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Try adjusting your search or generate new content
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            <div className="col-span-3">
-              {selectedContent ? (
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle>{selectedContent.topic}</CardTitle>
-                    <CardDescription className="flex items-center gap-2">
-                      <Badge variant="outline">{selectedContent.content_type}</Badge>
-                      <Badge variant="secondary">{selectedContent.llm_model_used}</Badge>
-                      <span className="text-muted-foreground">
-                        {new Date(selectedContent.created_at).toLocaleDateString()}
-                      </span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-muted p-6 rounded-md whitespace-pre-wrap h-[calc(100vh-300px)] overflow-auto">
-                      {selectedContent.generated_text}
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="h-[calc(100vh-220px)] flex items-center justify-center">
-                  <CardContent className="text-center py-12">
-                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-xl font-medium mb-2">No document selected</h3>
-                    <p className="text-muted-foreground max-w-md">
-                      Select a document from the list to view its content
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-        
-        {/* Policies Tab */}
-        <TabsContent value="policies">
-          <div className="grid grid-cols-4 gap-6">
-            <div className="col-span-1">
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Search policies..."
-                    className="pl-8"
-                    value={searchTermPolicies}
-                    onChange={(e) => setSearchTermPolicies(e.target.value)}
-                  />
-                </div>
+              <div className="col-span-3">
+                {selectedStandard ? (
+                  <Card className="h-full">
+                    <CardHeader>
+                      <CardTitle>{selectedStandard.standard_title}</CardTitle>
+                      <CardDescription className="flex items-center gap-2">
+                        <Badge variant="outline">{selectedStandard.standard_type_name}</Badge>
+                        {selectedStandard.llm_model_used && (
+                          <Badge variant="secondary">{selectedStandard.llm_model_used}</Badge>
+                        )}
+                        <span className="text-muted-foreground">
+                          {new Date(selectedStandard.created_at).toLocaleDateString()}
+                        </span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div 
+                        className="bg-muted p-6 rounded-md h-[calc(100vh-300px)] overflow-auto"
+                        dangerouslySetInnerHTML={{ __html: selectedStandard.content }}
+                      />
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="h-[calc(100vh-220px)] flex items-center justify-center">
+                    <CardContent className="text-center py-12">
+                      <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-xl font-medium mb-2">No standard selected</h3>
+                      <p className="text-muted-foreground max-w-md">
+                        Select a standard from the list to view its content
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
-              
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center space-x-4">
-                      <Skeleton className="h-12 w-12 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-[250px]" />
-                        <Skeleton className="h-4 w-[200px]" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : filteredPolicies.length > 0 ? (
-                <div className="space-y-2 max-h-[calc(100vh-220px)] overflow-y-auto">
-                  {filteredPolicies.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className={`p-3 border rounded-md cursor-pointer hover:bg-muted ${
-                        selectedContent?.id === doc.id ? "bg-muted" : ""
-                      }`}
-                      onClick={() => selectDocument(doc.id)}
-                    >
-                      <div className="font-medium">{doc.topic}</div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Badge variant="outline">{doc.content_type}</Badge>
-                        {new Date(doc.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 border rounded-md">
-                  <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <h3 className="text-lg font-medium">No policies found</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Try adjusting your search or generate new content
-                  </p>
-                </div>
-              )}
             </div>
-            
-            <div className="col-span-3">
-              {selectedContent ? (
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle>{selectedContent.topic}</CardTitle>
-                    <CardDescription className="flex items-center gap-2">
-                      <Badge variant="outline">{selectedContent.content_type}</Badge>
-                      <Badge variant="secondary">{selectedContent.llm_model_used}</Badge>
-                      <span className="text-muted-foreground">
-                        {new Date(selectedContent.created_at).toLocaleDateString()}
-                      </span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-muted p-6 rounded-md whitespace-pre-wrap h-[calc(100vh-300px)] overflow-auto">
-                      {selectedContent.generated_text}
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="h-[calc(100vh-220px)] flex items-center justify-center">
-                  <CardContent className="text-center py-12">
-                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-xl font-medium mb-2">No document selected</h3>
-                    <p className="text-muted-foreground max-w-md">
-                      Select a document from the list to view its content
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-        
-        {/* Others Tab */}
-        <TabsContent value="others">
-          <div className="grid grid-cols-4 gap-6">
-            <div className="col-span-1">
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Search other documents..."
-                    className="pl-8"
-                    value={searchTermOthers}
-                    onChange={(e) => setSearchTermOthers(e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center space-x-4">
-                      <Skeleton className="h-12 w-12 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-[250px]" />
-                        <Skeleton className="h-4 w-[200px]" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : filteredOthers.length > 0 ? (
-                <div className="space-y-2 max-h-[calc(100vh-220px)] overflow-y-auto">
-                  {filteredOthers.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className={`p-3 border rounded-md cursor-pointer hover:bg-muted ${
-                        selectedContent?.id === doc.id ? "bg-muted" : ""
-                      }`}
-                      onClick={() => selectDocument(doc.id)}
-                    >
-                      <div className="font-medium">{doc.topic}</div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Badge variant="outline">{doc.content_type}</Badge>
-                        {new Date(doc.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 border rounded-md">
-                  <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <h3 className="text-lg font-medium">No other documents found</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Try adjusting your search or generate new content
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            <div className="col-span-3">
-              {selectedContent ? (
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle>{selectedContent.topic}</CardTitle>
-                    <CardDescription className="flex items-center gap-2">
-                      <Badge variant="outline">{selectedContent.content_type}</Badge>
-                      <Badge variant="secondary">{selectedContent.llm_model_used}</Badge>
-                      <span className="text-muted-foreground">
-                        {new Date(selectedContent.created_at).toLocaleDateString()}
-                      </span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-muted p-6 rounded-md whitespace-pre-wrap h-[calc(100vh-300px)] overflow-auto">
-                      {selectedContent.generated_text}
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="h-[calc(100vh-220px)] flex items-center justify-center">
-                  <CardContent className="text-center py-12">
-                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-xl font-medium mb-2">No document selected</h3>
-                    <p className="text-muted-foreground max-w-md">
-                      Select a document from the list to view its content
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
+        ))}
       </Tabs>
-      
-      <div className="flex justify-center mt-6">
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-              />
-            </PaginationItem>
-            <PaginationItem>
-              <div className="px-4 py-2">{currentPage}</div>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationNext
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      </div>
     </div>
   )
 }
