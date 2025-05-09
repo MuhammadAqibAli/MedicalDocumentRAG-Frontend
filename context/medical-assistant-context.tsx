@@ -183,7 +183,7 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
     async uploadDocument(file: File, documentType: DocumentType): Promise<Document> {
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("document_type", documentType)
+      formData.append("standard_type_id", documentType)
 
       try {
         const response = await axios.post(`${api.baseUrl}/upload/`, formData, {
