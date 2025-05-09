@@ -1,31 +1,37 @@
+"use client"
+
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import Link from "next/link"
-import { FileUp, History, Sparkles } from "lucide-react"
+import { FileUp, Sparkles, History } from "lucide-react"
 
 export default function Home() {
   return (
-    <div className="space-y-8 max-w-6xl mx-auto px-4">
-      <section className="py-12 text-center">
-        <h1 className="text-4xl font-bold tracking-tight mb-4">Medical Assistant for Healthcare Professionals</h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Upload medical documents, generate content using AI models, and manage your generated content efficiently.
+    <div className="container mx-auto px-4 py-12">
+      <section className="text-center max-w-3xl mx-auto mb-12">
+        <h1 className="text-3xl font-bold tracking-tight mb-4">Medical Assistant for Healthcare Professionals</h1>
+        <p className="text-gray-600 mb-8">
+          Upload medical documents, generate content using AI models, and manage 
+          your generated content efficiently.
         </p>
         
-        {/* Add the action buttons */}
-        <div className="flex justify-center gap-4 mt-8">
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Sparkles className="h-4 w-4 mr-2" />
-            Start Generating
+        <div className="flex justify-center gap-4 mb-12">
+          <Button asChild className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2 px-6">
+            <Link href="/generate">
+              <Sparkles className="h-4 w-4" />
+              Start Generating
+            </Link>
           </Button>
-          <Button variant="outline" className="border-gray-300">
-            <FileUp className="h-4 w-4 mr-2" />
-            Upload Documents
+          <Button asChild variant="outline" className="border-gray-300 flex items-center gap-2 px-6">
+            <Link href="/upload">
+              <FileUp className="h-4 w-4" />
+              Upload Documents
+            </Link>
           </Button>
         </div>
       </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
         <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg font-medium text-blue-600">
@@ -35,7 +41,9 @@ export default function Home() {
             <CardDescription>Upload standard documents in PDF or DOCX format</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-4 text-sm text-gray-600">Securely upload your standard documents for processing and analysis.</p>
+            <p className="mb-4 text-sm text-gray-600">
+              Securely upload your standard documents for processing and analysis.
+            </p>
             <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
               <Link href="/upload">Upload Documents</Link>
             </Button>
@@ -51,7 +59,9 @@ export default function Home() {
             <CardDescription>Generate standard content using AI models</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-4 text-sm text-gray-600">Create policies, procedures, and other standard content with AI assistance.</p>
+            <p className="mb-4 text-sm text-gray-600">
+              Create policies, procedures, and other standard content with AI assistance.
+            </p>
             <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
               <Link href="/generate">Generate Content</Link>
             </Button>
@@ -67,7 +77,9 @@ export default function Home() {
             <CardDescription>View and manage your generated content</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-4 text-sm text-gray-600">Access, filter, and download your previously generated content.</p>
+            <p className="mb-4 text-sm text-gray-600">
+              Access, filter, and download your previously generated content.
+            </p>
             <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
               <Link href="/history">View History</Link>
             </Button>
@@ -75,13 +87,13 @@ export default function Home() {
         </Card>
       </div>
 
-      <section className="py-6 bg-gray-50 rounded-lg p-6 mt-8">
-        <h2 className="text-xl font-semibold mb-2">Compliant with NZ Healthcare Standards</h2>
-        <p className="text-gray-600 text-sm">
-          Our Medical Assistant is designed to help healthcare professionals in New Zealand create and manage medical
-          content while maintaining compliance with local healthcare standards and regulations.
+      <div className="max-w-3xl mx-auto mt-16 bg-gray-50 p-6 rounded-lg border border-gray-200">
+        <h2 className="text-xl font-semibold text-gray-800 mb-2">Compliant with NZ Healthcare Standards</h2>
+        <p className="text-gray-600">
+          Our Medical Assistant is designed to help healthcare professionals in New Zealand create and manage medical content 
+          while maintaining compliance with local healthcare standards and regulations.
         </p>
-      </section>
+      </div>
     </div>
   )
 }
