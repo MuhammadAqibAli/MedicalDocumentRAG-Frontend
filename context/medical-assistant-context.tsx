@@ -439,21 +439,19 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
         
         // If response is not valid, return fallback types
         return [
-          { id: "policy", name: "Policy" },
-          { id: "procedure", name: "Procedure" },
-          { id: "guideline", name: "Guideline" },
-          { id: "form", name: "Form" },
-          { id: "other", name: "Other" }
+          { id: "eb3c02c3-f39a-4547-92c5-5c78e39aa82f", name: "Best Practice" },
+          { id: "5ef182ec-5541-44f0-b2eb-46460184ac54", name: "Policy" },
+          { id: "457e7f33-a192-4f8e-9fa1-0553392ddc2c", name: "Procedure" },
+          { id: "91a641b1-2092-4d5c-8c3e-a4f9f4518d6a", name: "Standing Order" }
         ];
       } catch (error) {
         console.error("Error fetching standard types:", error);
         // Return fallback types instead of throwing
         return [
-          { id: "policy", name: "Policy" },
-          { id: "procedure", name: "Procedure" },
-          { id: "guideline", name: "Guideline" },
-          { id: "form", name: "Form" },
-          { id: "other", name: "Other" }
+          { id: "eb3c02c3-f39a-4547-92c5-5c78e39aa82f", name: "Best Practice" },
+          { id: "5ef182ec-5541-44f0-b2eb-46460184ac54", name: "Policy" },
+          { id: "457e7f33-a192-4f8e-9fa1-0553392ddc2c", name: "Procedure" },
+          { id: "91a641b1-2092-4d5c-8c3e-a4f9f4518d6a", name: "Standing Order" }
         ];
       }
     },

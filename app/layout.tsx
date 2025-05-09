@@ -18,18 +18,25 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
-        <ThemeProvider attribute="class" defaultTheme="light">
+    <html lang="en">
+      <body className={inter.className}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
           <MedicalAssistantProvider>
-            <div className="min-h-screen flex flex-col">
+            <div className="flex min-h-screen flex-col">
               <Navbar />
-              <main className="flex-1 container mx-auto py-6 px-4">{children}</main>
-              <footer className="border-t py-4">
+              <main className="flex-1 py-6">
+                {children}
+              </main>
+              <footer className="border-t py-4 text-center text-sm text-muted-foreground">
                 <FooterCopyright />
               </footer>
             </div>

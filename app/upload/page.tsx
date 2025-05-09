@@ -11,7 +11,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { FileUp, AlertCircle, CheckCircle2, FileText } from "lucide-react"
+import { FileUp, AlertCircle, CheckCircle2, FileText, Filter, ArrowUpDown } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -19,6 +19,13 @@ interface UploadFormValues {
   documentType: DocumentType
 }
 
+interface UploadedDocument {
+  id: string
+  name: string
+  type: string
+  uploadedAt: string
+  size: string
+}
 
 export default function UploadPage() {
   const { uploadDocument, isLoading, error } = useMedicalAssistant()
@@ -26,6 +33,12 @@ export default function UploadPage() {
   const [uploadSuccess, setUploadSuccess] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([
+    { id: "1", name: "Clinical Guideline - Diabetes Management.pdf", type: "Clinical Guideline", uploadedAt: "5 days ago", size: "3.2 MB" },
+    { id: "2", name: "Patient Information - COVID-19 Vaccination.docx", type: "Patient Information", uploadedAt: "6 days ago", size: "1.8 MB" },
+    { id: "3", name: "Policy - Infection Control Measures.pdf", type: "Policy", uploadedAt: "4 days ago", size: "4.5 MB" },
+    { id: "4", name: "Best Practice - Wound Care.pdf", type: "Best Practice", uploadedAt: "1 day ago", size: "2.7 MB" }
+  ])
 
   const form = useForm<UploadFormValues>({
     defaultValues: {
@@ -62,6 +75,17 @@ export default function UploadPage() {
       clearInterval(progressInterval)
       setUploadProgress(100)
       setUploadSuccess(true)
+      
+      // Add the uploaded document to the list
+      const newDocument: UploadedDocument = {
+        id: Date.now().toString(),
+        name: selectedFile.name,
+        type: data.documentType.charAt(0).toUpperCase() + data.documentType.slice(1),
+        uploadedAt: "Just now",
+        size: `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`
+      }
+      
+      setUploadedDocuments(prev => [newDocument, ...prev])
       setSelectedFile(null)
 
       // Reset the form
@@ -101,139 +125,194 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Standard Upload</h1>
+    <div className="container mx-auto px-4">
+      <h1 className="text-2xl font-bold mb-2">Document Upload</h1>
+      <p className="text-muted-foreground mb-6">Upload and manage your standard documents</p>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileUp className="h-5 w-5" />
-            Upload Standard Document
-          </CardTitle>
-          <CardDescription>Upload standard documents in PDF or DOCX format for processing</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="documentType"
-                render={({ field }) => {
-                  const { standardTypes, fetchStandardTypes, isLoading: contextLoading } = useMedicalAssistant();
-                  const [typesLoading, setTypesLoading] = useState(true);
-                  
-                  useEffect(() => {
-                    const loadTypes = async () => {
-                      setTypesLoading(true);
-                      try {
-                        // If types are already loaded in context, use them
-                        if (standardTypes.length === 0) {
-                          await fetchStandardTypes();
-                        }
-                        // Set the first type as default if available and not already set
-                        if (standardTypes.length > 0 && !field.value) {
-                          field.onChange(standardTypes[0].id);
-                        }
-                      } catch (error) {
-                        console.error("Failed to fetch standard types:", error);
-                      } finally {
-                        setTypesLoading(false);
-                      }
-                    };
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Left Column - Uploaded Documents */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Uploaded Documents</CardTitle>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-1" />
+                Filter
+              </Button>
+              <Button variant="outline" size="sm">
+                <ArrowUpDown className="h-4 w-4 mr-1" />
+                Sort
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="border-t">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-3 text-sm font-medium text-muted-foreground">Document</th>
+                    <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
+                    <th className="text-left p-3 text-sm font-medium text-muted-foreground">Uploaded</th>
+                    <th className="text-left p-3 text-sm font-medium text-muted-foreground">Size</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {uploadedDocuments.map((doc) => (
+                    <tr key={doc.id} className="border-t hover:bg-muted/50">
+                      <td className="p-3">
+                        <div className="flex items-center">
+                          {doc.name.endsWith('.pdf') ? (
+                            <FileText className="h-5 w-5 text-red-500 mr-2" />
+                          ) : (
+                            <FileText className="h-5 w-5 text-blue-500 mr-2" />
+                          )}
+                          <span className="text-sm">{doc.name}</span>
+                        </div>
+                      </td>
+                      <td className="p-3 text-sm">{doc.type}</td>
+                      <td className="p-3 text-sm">{doc.uploadedAt}</td>
+                      <td className="p-3 text-sm">{doc.size}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Right Column - Upload Document */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Upload Document</CardTitle>
+            <CardDescription>Upload standard documents in PDF or DOCX format for processing</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="documentType"
+                  render={({ field }) => {
+                    const { standardTypes, fetchStandardTypes, isLoading: contextLoading } = useMedicalAssistant();
+                    const [typesLoading, setTypesLoading] = useState(true);
                     
-                    loadTypes();
-                  }, [fetchStandardTypes, standardTypes.length]);
-                  
-                  return (
-                    <FormItem>
-                      <FormLabel>Standard Type</FormLabel>
-                      {typesLoading ? (
-                        <Skeleton className="h-10 w-full" />
-                      ) : (
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select standard type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {standardTypes.map((type) => (
-                              <SelectItem key={type.id} value={type.id}>
-                                {type.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      <FormDescription>Select the type of standard you are uploading</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
-              />
+                    useEffect(() => {
+                      const loadTypes = async () => {
+                        setTypesLoading(true);
+                        try {
+                          // If types are already loaded in context, use them
+                          if (standardTypes.length === 0) {
+                            await fetchStandardTypes();
+                          }
+                          // Set the first type as default if available and not already set
+                          if (standardTypes.length > 0 && !field.value) {
+                            field.onChange(standardTypes[0].id);
+                          }
+                        } catch (error) {
+                          console.error("Failed to fetch standard types:", error);
+                        } finally {
+                          setTypesLoading(false);
+                        }
+                      };
+                      
+                      loadTypes();
+                    }, [fetchStandardTypes, standardTypes.length]);
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel>Standard Type</FormLabel>
+                        {typesLoading ? (
+                          <Skeleton className="h-10 w-full" />
+                        ) : (
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select the type of standard you are uploading" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {standardTypes.map((type) => (
+                                <SelectItem key={type.id} value={type.id}>
+                                  {type.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
 
-              <FormItem>
-                <FormLabel>Document File</FormLabel>
-                <FormControl>
-                  <div className="grid w-full max-w-sm items-center gap-1.5">
+                <FormItem>
+                  <FormLabel>Document File</FormLabel>
+                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <FileUp className="h-10 w-10 text-blue-500 mb-2" />
+                      <Button variant="ghost" className="text-blue-500" onClick={() => fileInputRef.current?.click()}>
+                        Choose File
+                      </Button>
+                      <p className="text-sm text-muted-foreground mt-2">Upload a PDF or DOCX file (max 10MB)</p>
+                    </div>
                     <Input
                       ref={fileInputRef}
                       type="file"
                       accept=".pdf,.docx"
                       onChange={handleFileChange}
                       disabled={isLoading}
+                      className="hidden"
                     />
                   </div>
-                </FormControl>
-                <FormDescription>Upload a PDF or DOCX file (max 10MB)</FormDescription>
-                {form.formState.errors.root && (
-                  <p className="text-sm font-medium text-destructive">{form.formState.errors.root.message}</p>
-                )}
-              </FormItem>
+                  {form.formState.errors.root && (
+                    <p className="text-sm font-medium text-destructive mt-2">{form.formState.errors.root.message}</p>
+                  )}
+                </FormItem>
 
-              {selectedFile && (
-                <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                  <div className="text-sm">
-                    <p className="font-medium">{selectedFile.name}</p>
-                    <p className="text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                {selectedFile && (
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <div className="text-sm">
+                      <p className="font-medium">{selectedFile.name}</p>
+                      <p className="text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {isLoading && (
-                <div className="space-y-2">
-                  <Progress value={uploadProgress} className="h-2" />
-                  <p className="text-sm text-muted-foreground text-center">Uploading... {uploadProgress}%</p>
-                </div>
-              )}
+                {isLoading && (
+                  <div className="space-y-2">
+                    <Progress value={uploadProgress} className="h-2" />
+                    <p className="text-sm text-muted-foreground text-center">Uploading... {uploadProgress}%</p>
+                  </div>
+                )}
 
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-              {uploadSuccess && (
-                <Alert className="bg-green-50 border-green-200">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertTitle className="text-green-600">Success</AlertTitle>
-                  <AlertDescription className="text-green-700">Document uploaded successfully</AlertDescription>
-                </Alert>
-              )}
+                {uploadSuccess && (
+                  <Alert className="bg-green-50 border-green-200">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <AlertTitle className="text-green-600">Success</AlertTitle>
+                    <AlertDescription className="text-green-700">Document uploaded successfully</AlertDescription>
+                  </Alert>
+                )}
 
-              <Button type="submit" disabled={isLoading || !selectedFile} className="w-full">
-                {isLoading ? "Uploading..." : "Upload Document"}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-        <CardFooter className="flex justify-center border-t px-6 py-4">
-          <p className="text-sm text-muted-foreground">Supported file formats: PDF, DOCX</p>
-        </CardFooter>
-      </Card>
+                <Button type="submit" disabled={isLoading || !selectedFile} className="w-full bg-blue-500 hover:bg-blue-600">
+                  {isLoading ? "Uploading..." : "Upload Document"}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+          <CardFooter className="flex justify-center border-t px-6 py-4">
+            <p className="text-sm text-muted-foreground">Supported file formats: PDF, DOCX</p>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   )
 }

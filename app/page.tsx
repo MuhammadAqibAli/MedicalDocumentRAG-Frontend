@@ -5,67 +5,79 @@ import { FileUp, History, Sparkles } from "lucide-react"
 
 export default function Home() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-6xl mx-auto px-4">
       <section className="py-12 text-center">
         <h1 className="text-4xl font-bold tracking-tight mb-4">Medical Assistant for Healthcare Professionals</h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           Upload medical documents, generate content using AI models, and manage your generated content efficiently.
         </p>
+        
+        {/* Add the action buttons */}
+        <div className="flex justify-center gap-4 mt-8">
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <Sparkles className="h-4 w-4 mr-2" />
+            Start Generating
+          </Button>
+          <Button variant="outline" className="border-gray-300">
+            <FileUp className="h-4 w-4 mr-2" />
+            Upload Documents
+          </Button>
+        </div>
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileUp className="h-5 w-5" />
+        <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-medium text-blue-600">
+              <FileUp className="h-5 w-5 text-blue-600" />
               Standard Upload
             </CardTitle>
             <CardDescription>Upload standard documents in PDF or DOCX format</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-4">Securely upload your standard documents for processing and analysis.</p>
-            <Button asChild className="w-full">
+            <p className="mb-4 text-sm text-gray-600">Securely upload your standard documents for processing and analysis.</p>
+            <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
               <Link href="/upload">Upload Documents</Link>
             </Button>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" />
+        <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-medium text-blue-600">
+              <Sparkles className="h-5 w-5 text-blue-600" />
               Content Generation
             </CardTitle>
             <CardDescription>Generate standard content using AI models</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-4">Create policies, procedures, and other standard content with AI assistance.</p>
-            <Button asChild className="w-full">
+            <p className="mb-4 text-sm text-gray-600">Create policies, procedures, and other standard content with AI assistance.</p>
+            <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
               <Link href="/generate">Generate Content</Link>
             </Button>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-5 w-5" />
+        <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-medium text-blue-600">
+              <History className="h-5 w-5 text-blue-600" />
               Content History
             </CardTitle>
             <CardDescription>View and manage your generated content</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-4">Access, filter, and download your previously generated content.</p>
-            <Button asChild className="w-full">
+            <p className="mb-4 text-sm text-gray-600">Access, filter, and download your previously generated content.</p>
+            <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
               <Link href="/history">View History</Link>
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      <section className="py-8 bg-muted rounded-lg p-6 mt-12">
-        <h2 className="text-2xl font-bold mb-4">Compliant with NZ Healthcare Standards</h2>
-        <p className="text-muted-foreground">
+      <section className="py-6 bg-gray-50 rounded-lg p-6 mt-8">
+        <h2 className="text-xl font-semibold mb-2">Compliant with NZ Healthcare Standards</h2>
+        <p className="text-gray-600 text-sm">
           Our Medical Assistant is designed to help healthcare professionals in New Zealand create and manage medical
           content while maintaining compliance with local healthcare standards and regulations.
         </p>

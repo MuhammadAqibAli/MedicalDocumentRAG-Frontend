@@ -35,9 +35,11 @@ export default function Navbar() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-            <FileText className="h-6 w-6" />
+          <div className="w-6 h-6 bg-primary rounded flex items-center justify-center text-white">
+            <span className="text-xs">M</span>
+          </div>
             <span>MMC AI</span>
-            <Badge variant="outline" className="text-xs font-normal py-0 h-5">Beta</Badge>
+            <span className="text-xs px-1.5 py-0.5 bg-secondary text-secondary-foreground rounded">Beta</span>
           </Link>
         </div>
 

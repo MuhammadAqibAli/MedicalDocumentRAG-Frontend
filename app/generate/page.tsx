@@ -54,7 +54,7 @@ export default function GeneratePage() {
     fetchAvailableModels, 
     isLoading: contextLoading, 
     error, 
-    saveStandard ,
+    saveStandard,
     standardTypes,
     fetchStandardTypes,
     isLoading
@@ -74,6 +74,49 @@ export default function GeneratePage() {
   const editorRef = useRef<any>(null)
   const editorContainerRef = useRef<HTMLDivElement>(null)
   const [documentSelectionDialogOpen, setDocumentSelectionDialogOpen] = useState(false)
+  
+  // New state variables for standards and comparison
+  const [standards, setStandards] = useState<any[]>([])
+  const [isLoadingStandards, setIsLoadingStandards] = useState(false)
+  const [standardsError, setStandardsError] = useState<string | null>(null)
+  const [showComparisonResults, setShowComparisonResults] = useState(false)
+  const [comparisonResult, setComparisonResult] = useState<any>(null)
+  const [isComparing, setIsComparing] = useState(false)
+
+  // Add this useEffect to fetch standards when the dialog opens
+  useEffect(() => {
+    if (historyDialogOpen) {
+      fetchStandards();
+    }
+  }, [historyDialogOpen]);
+
+  // Function to fetch standards based on the selected content type
+  const fetchStandards = async () => {
+    const selectedType = form.getValues().contentType;
+    if (!selectedType) {
+      setStandardsError("Please select a Standard Type from Content Generation.");
+      return;
+    }
+
+    setIsLoadingStandards(true);
+    setStandardsError(null);
+
+    try {
+      const response = await axios.get(`http://127.0.0.1:8000/api/standards/?standard_type_id=${selectedType}`);
+      
+      if (Array.isArray(response.data)) {
+        setStandards(response.data);
+      } else {
+        setStandards([]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch standards:", err);
+      setStandardsError("Failed to load standards. Please try again later.");
+      setStandards([]);
+    } finally {
+      setIsLoadingStandards(false);
+    }
+  };
 
   const form = useForm<GenerateFormValues>({
     defaultValues: {
@@ -312,6 +355,54 @@ export default function GeneratePage() {
   const filteredDocuments = documents.filter(doc => 
     doc.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const compareDocuments = async () => {
+    // Check if both documents are present
+    if (!editorContent || !historyContent) {
+      toast({
+        title: "Missing Documents",
+        description: "Both Current Document and Historical Document are required for comparison.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsComparing(true);
+    setShowComparisonResults(false);
+
+    try {
+      const selectedType = form.getValues().contentType;
+      
+      const response = await axios.post('http://127.0.0.1:8000/api/standards/compare/', {
+        content1: editorContent,
+        content2: historyContent,
+        standard_type_id: selectedType
+      });
+
+      setComparisonResult(response.data);
+      setShowComparisonResults(true);
+    } catch (error) {
+      console.error("Comparison failed:", error);
+      toast({
+        title: "Comparison Failed",
+        description: "An error occurred while comparing the documents. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsComparing(false);
+    }
+  };
+
+  const handleCompareDialogChange = (open: boolean) => {
+    setCompareDialogOpen(open);
+    
+    if (!open) {
+      // Clear the comparison data when dialog is closed
+      setHistoryContent("");
+      setShowComparisonResults(false);
+      setComparisonResult(null);
+    }
+  };
 
   return (
     <div className="max-w-full mx-auto">
@@ -593,25 +684,26 @@ export default function GeneratePage() {
       </div>
 
       {/* Compare Dialog */}
-      <Dialog open={compareDialogOpen} onOpenChange={setCompareDialogOpen}>
-        <DialogContent className="max-w-6xl">
+      <Dialog open={compareDialogOpen} onOpenChange={handleCompareDialogChange}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Compare Documents</DialogTitle>
             <DialogDescription>
               Compare current document with a previously saved version
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          
+          <div className="grid grid-cols-2 gap-4 mt-4 overflow-hidden">
             <div>
               <h3 className="text-sm font-medium mb-2">Current Document</h3>
-              <div className="border rounded-md p-2 h-[400px] overflow-auto">
+              <div className="border rounded-md p-2 h-[300px] overflow-auto">
                 <CKEditor
                   editor={ClassicEditor}
                   data={editorContent}
                   disabled={true}
                   config={{
                     toolbar: [],
-                    height: '380px'
+                    height: '280px'
                   }}
                 />
               </div>
@@ -622,26 +714,103 @@ export default function GeneratePage() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => setDocumentSelectionDialogOpen(true)}
+                  onClick={() => {
+                    const selectedType = form.getValues().contentType;
+                    if (!selectedType) {
+                      toast({
+                        title: "Standard Type Required",
+                        description: "Please select a Standard Type from Content Generation.",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    setHistoryDialogOpen(true);
+                  }}
                   className="flex items-center gap-1"
                 >
                   <History className="h-4 w-4" />
                   Select from History
                 </Button>
               </div>
-              <div className="border rounded-md p-2 h-[400px] overflow-auto">
+              <div className="border rounded-md p-2 h-[300px] overflow-auto">
                 <CKEditor
                   editor={ClassicEditor}
                   data={historyContent}
                   disabled={true}
                   config={{
                     toolbar: [],
-                    height: '380px'
+                    height: '280px'
                   }}
                 />
               </div>
             </div>
           </div>
+          
+          {/* Centered Compare Button */}
+          <div className="flex justify-center mt-6">
+            <Button 
+              onClick={compareDocuments}
+              disabled={isComparing}
+              className="px-8"
+            >
+              {isComparing ? "Comparing..." : "Compare"}
+            </Button>
+          </div>
+          
+          {/* Comparison Results Viewer */}
+          {showComparisonResults && (
+            <div className="mt-6 border rounded-md p-4 overflow-auto flex-grow">
+              <h3 className="text-lg font-medium mb-4">Comparison Results</h3>
+              
+              {comparisonResult ? (
+                <div className="space-y-6 overflow-auto">
+                  {/* Key Differences */}
+                  <div>
+                    <h4 className="text-md font-medium mb-2">Key Differences</h4>
+                    <div className="space-y-4">
+                      {comparisonResult.comparison.key_differences.map((diff: any, index: number) => (
+                        <div key={index} className="border rounded-md p-3">
+                          <div className="font-medium text-primary mb-2">{diff.aspect}</div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">Current Document</div>
+                              <div className="text-sm">{diff.document1}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground mb-1">Historical Document</div>
+                              <div className="text-sm">{diff.document2}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Recommendation */}
+                  <div>
+                    <h4 className="text-md font-medium mb-2">Recommendation</h4>
+                    <div className="border rounded-md p-3 bg-muted/50">
+                      <p>{comparisonResult.comparison.recommendation}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Improvement Suggestions */}
+                  <div>
+                    <h4 className="text-md font-medium mb-2">Improvement Suggestions</h4>
+                    <ul className="list-disc pl-5 space-y-2">
+                      {comparisonResult.comparison.improvement_suggestions.map((suggestion: string, index: number) => (
+                        <li key={index}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-muted p-4 rounded-md h-[300px] overflow-auto flex items-center justify-center">
+                  <p className="text-center">We are currently working on the Compare feature.</p>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -654,25 +823,65 @@ export default function GeneratePage() {
               Choose a previously saved document to compare
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4 max-h-[400px] overflow-y-auto">
-            {savedContents.length > 0 ? (
-              <div className="space-y-2">
-                {savedContents.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="border rounded-md p-3 cursor-pointer hover:bg-muted"
-                    onClick={() => selectHistoryContent(item.content)}
-                  >
-                    <div className="font-medium">{item.title}</div>
-                    <div className="text-sm text-muted-foreground">{item.date}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-sm text-muted-foreground">No documents available</p>
-              </div>
-            )}
+          <div className="mt-4">
+            <div className="relative mb-4">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search documents..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <div className="max-h-[400px] overflow-y-auto">
+              {isLoadingStandards ? (
+                <div className="p-4 space-y-3">
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-full" />
+                </div>
+              ) : standardsError ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{standardsError}</AlertDescription>
+                </Alert>
+              ) : standards.length > 0 ? (
+                <div className="space-y-2">
+                  {standards
+                    .filter(standard => 
+                      standard.standard_title.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map((standard) => (
+                      <div 
+                        key={standard.id} 
+                        className="border rounded-md p-3 cursor-pointer hover:bg-muted"
+                        onClick={() => {
+                          setHistoryContent(standard.content);
+                          setHistoryDialogOpen(false);
+                        }}
+                      >
+                        <div className="font-medium">{standard.standard_title}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Badge variant="outline">{standard.standard_type_name}</Badge>
+                          {new Date(standard.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    ))
+                  }
+                </div>
+              ) : (
+                <div className="text-center py-8 border rounded-md">
+                  <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <h3 className="text-lg font-medium">No standards found</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Try adjusting your search or create new content
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
