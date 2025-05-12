@@ -626,9 +626,16 @@ export default function GeneratePage() {
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle>{form.getValues().topic || "New Document"}</CardTitle>
+                    <CardTitle>
+                      {form.getValues().topic || "New Document"}
+                      {standardTypes.find(t => t.id === form.getValues().contentType)?.name && 
+                        ` - ${standardTypes.find(t => t.id === form.getValues().contentType)?.name}`
+                      }
+                    </CardTitle>
                     <CardDescription className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline">{form.getValues().contentType}</Badge>
+                      <Badge variant="outline">
+                        {standardTypes.find(t => t.id === form.getValues().contentType)?.name || form.getValues().contentType}
+                      </Badge>
                       {generatedContent && (
                         <Badge variant="secondary">{generatedContent.llm_model_used}</Badge>
                       )}

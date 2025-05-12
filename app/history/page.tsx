@@ -403,7 +403,7 @@ export default function HistoryPage() {
             
             <div className="flex-1 overflow-hidden">
               <label className="text-sm font-medium mb-1 block">Content</label>
-              <div className="h-[calc(60vh-100px)] border rounded-md overflow-hidden">
+              <div className="h-[calc(60vh-100px)] border rounded-md overflow-auto">
                 <CKEditor
                   editor={ClassicEditor}
                   data={editedContent}
