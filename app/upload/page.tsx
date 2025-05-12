@@ -11,9 +11,20 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { FileUp, AlertCircle, CheckCircle2, FileText, Filter, ArrowUpDown } from "lucide-react"
+import { FileUp, AlertCircle, CheckCircle2, FileText, Filter, ArrowUpDown, Download, Trash2, Eye, ArrowUp, ArrowDown } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { useToast } from "@/components/ui/use-toast"
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel
+} from "@/components/ui/dropdown-menu"
+import axios from "axios"
 
 interface UploadFormValues {
   documentType: DocumentType
@@ -21,30 +32,145 @@ interface UploadFormValues {
 
 interface UploadedDocument {
   id: string
-  name: string
-  type: string
-  uploadedAt: string
-  size: string
+  file_name: string
+  document_type_id: string
+  document_type_name: string
+  uploaded_at: string
+  document_extension_type: string
 }
 
+type SortField = 'file_name' | 'document_type_name' | 'uploaded_at';
+type SortDirection = 'asc' | 'desc';
+type FilterType = 'all' | 'pdf' | 'docx' | string;
+
 export default function UploadPage() {
-  const { uploadDocument, isLoading, error } = useMedicalAssistant()
+  const { uploadDocument, isLoading, error, standardTypes, fetchStandardTypes } = useMedicalAssistant()
+  const { toast } = useToast()
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadSuccess, setUploadSuccess] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([
-    { id: "1", name: "Clinical Guideline - Diabetes Management.pdf", type: "Clinical Guideline", uploadedAt: "5 days ago", size: "3.2 MB" },
-    { id: "2", name: "Patient Information - COVID-19 Vaccination.docx", type: "Patient Information", uploadedAt: "6 days ago", size: "1.8 MB" },
-    { id: "3", name: "Policy - Infection Control Measures.pdf", type: "Policy", uploadedAt: "4 days ago", size: "4.5 MB" },
-    { id: "4", name: "Best Practice - Wound Care.pdf", type: "Best Practice", uploadedAt: "1 day ago", size: "2.7 MB" }
-  ])
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([])
+  const [isDocumentsLoading, setIsDocumentsLoading] = useState(true)
+  const [selectedDocument, setSelectedDocument] = useState<UploadedDocument | null>(null)
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [sortField, setSortField] = useState<SortField>('uploaded_at')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [filterType, setFilterType] = useState<FilterType>('all')
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false)
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false)
 
   const form = useForm<UploadFormValues>({
     defaultValues: {
       documentType: "policy",
     },
   })
+
+  // Fetch documents on component mount
+  useEffect(() => {
+    fetchDocuments();
+    // Only run fetchStandardTypes if it's available and not already loaded
+    if (fetchStandardTypes && standardTypes.length === 0) {
+      fetchStandardTypes();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array to run only once on mount
+
+  const fetchDocuments = async () => {
+    setIsDocumentsLoading(true)
+    try {
+      const response = await axios.get('http://127.0.0.1:8000/api/documents/')
+      setUploadedDocuments(response.data)
+    } catch (error) {
+      console.error('Failed to fetch documents:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load documents. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsDocumentsLoading(false)
+    }
+  }
+
+  const viewDocument = async (document: UploadedDocument) => {
+    try {
+      const response = await axios.get(`http://127.0.0.1:8000/api/documents/${document.id}/`)
+      setSelectedDocument(response.data)
+      setIsViewDialogOpen(true)
+    } catch (error) {
+      console.error('Failed to fetch document details:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load document details. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const downloadDocument = async (document: UploadedDocument) => {
+    try {
+      const response = await axios.get(`http://127.0.0.1:8000/api/documents/${document.id}/download/`, {
+        responseType: 'blob'
+      })
+      
+      // Create a blob URL and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', document.file_name)
+      document.body.appendChild(link)
+      link.click()
+      
+      // Clean up
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(link)
+      
+      toast({
+        title: "Success",
+        description: "Document download started.",
+      })
+    } catch (error) {
+      console.error('Failed to download document:', error)
+      toast({
+        title: "Error",
+        description: "Failed to download document. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const deleteDocument = async (document: UploadedDocument) => {
+    if (confirm(`Are you sure you want to delete "${document.file_name}"?`)) {
+      setIsDeleting(true)
+      try {
+        await axios.delete(`http://127.0.0.1:8000/api/documents/${document.id}/`)
+        
+        // Remove document from state
+        setUploadedDocuments(prev => prev.filter(doc => doc.id !== document.id))
+        
+        // Close the dialog if the deleted document was being viewed
+        if (selectedDocument?.id === document.id) {
+          setIsViewDialogOpen(false)
+        }
+        
+        toast({
+          title: "Success",
+          description: "Document deleted successfully.",
+        })
+      } catch (error) {
+        console.error('Failed to delete document:', error)
+        toast({
+          title: "Error",
+          description: "Failed to delete document. Please try again.",
+          variant: "destructive"
+        })
+      } finally {
+        setIsDeleting(false)
+      }
+    }
+  }
 
   const onSubmit = async (data: UploadFormValues) => {
     if (!selectedFile) {
@@ -56,6 +182,7 @@ export default function UploadPage() {
     }
 
     setUploadSuccess(false)
+    setUploadProgress(0)
 
     // Simulate upload progress with slower increments for longer processing time
     const progressInterval = setInterval(() => {
@@ -76,16 +203,9 @@ export default function UploadPage() {
       setUploadProgress(100)
       setUploadSuccess(true)
       
-      // Add the uploaded document to the list
-      const newDocument: UploadedDocument = {
-        id: Date.now().toString(),
-        name: selectedFile.name,
-        type: data.documentType.charAt(0).toUpperCase() + data.documentType.slice(1),
-        uploadedAt: "Just now",
-        size: `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`
-      }
+      // Refresh the document list
+      fetchDocuments()
       
-      setUploadedDocuments(prev => [newDocument, ...prev])
       setSelectedFile(null)
 
       // Reset the form
@@ -95,9 +215,20 @@ export default function UploadPage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = ""
       }
+      
+      toast({
+        title: "Success",
+        description: "Document uploaded successfully.",
+      })
     } catch (error) {
       clearInterval(progressInterval)
       setUploadProgress(0)
+      
+      toast({
+        title: "Error",
+        description: "Failed to upload document. Please try again.",
+        variant: "destructive"
+      })
     }
   }
 
@@ -124,6 +255,81 @@ export default function UploadPage() {
     }
   }
 
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - date.getTime())
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 0) {
+      return "Today"
+    } else if (diffDays === 1) {
+      return "Yesterday"
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`
+    } else {
+      return date.toLocaleDateString()
+    }
+  }
+
+  // Handle sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      // Set new field and default to ascending
+      setSortField(field)
+      setSortDirection('asc')
+    }
+    setIsSortMenuOpen(false)
+  }
+
+  // Handle filtering
+  const handleFilter = (type: FilterType) => {
+    setFilterType(type)
+    setIsFilterMenuOpen(false)
+  }
+
+  // Get filtered and sorted documents
+  const getFilteredAndSortedDocuments = () => {
+    // First filter
+    let filtered = [...uploadedDocuments]
+    
+    if (filterType !== 'all') {
+      if (filterType === 'pdf' || filterType === 'docx') {
+        filtered = filtered.filter(doc => doc.document_extension_type === filterType)
+      } else {
+        // Filter by document type
+        filtered = filtered.filter(doc => doc.document_type_id === filterType)
+      }
+    }
+    
+    // Then sort
+    return filtered.sort((a, b) => {
+      let comparison = 0
+      
+      if (sortField === 'file_name') {
+        comparison = a.file_name.localeCompare(b.file_name)
+      } else if (sortField === 'document_type_name') {
+        comparison = a.document_type_name.localeCompare(b.document_type_name)
+      } else if (sortField === 'uploaded_at') {
+        comparison = new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime()
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }
+
+  const filteredAndSortedDocuments = getFilteredAndSortedDocuments()
+
+  // Get sort icon
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return null
+    return sortDirection === 'asc' ? <ArrowUp className="h-3 w-3 ml-1" /> : <ArrowDown className="h-3 w-3 ml-1" />
+  }
+
   return (
     <div className="container mx-auto px-4">
       <h1 className="text-2xl font-bold mb-2">Document Upload</h1>
@@ -135,47 +341,135 @@ export default function UploadPage() {
           <CardHeader className="pb-3">
             <CardTitle>Uploaded Documents</CardTitle>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-1" />
-                Filter
-              </Button>
-              <Button variant="outline" size="sm">
-                <ArrowUpDown className="h-4 w-4 mr-1" />
-                Sort
-              </Button>
+              <DropdownMenu open={isFilterMenuOpen} onOpenChange={setIsFilterMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Filter className="h-4 w-4 mr-1" />
+                    Filter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleFilter('all')}>
+                    All Documents
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>File Format</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleFilter('pdf')}>
+                    PDF Documents
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleFilter('docx')}>
+                    DOCX Documents
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Document Type</DropdownMenuLabel>
+                  {standardTypes.map(type => (
+                    <DropdownMenuItem key={type.id} onClick={() => handleFilter(type.id)}>
+                      {type.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <DropdownMenu open={isSortMenuOpen} onOpenChange={setIsSortMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <ArrowUpDown className="h-4 w-4 mr-1" />
+                    Sort
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleSort('file_name')}>
+                    <div className="flex items-center">
+                      Name {getSortIcon('file_name')}
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort('document_type_name')}>
+                    <div className="flex items-center">
+                      Type {getSortIcon('document_type_name')}
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort('uploaded_at')}>
+                    <div className="flex items-center">
+                      Date Uploaded {getSortIcon('uploaded_at')}
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="border-t">
-              <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="text-left p-3 text-sm font-medium text-muted-foreground">Document</th>
-                    <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
-                    <th className="text-left p-3 text-sm font-medium text-muted-foreground">Uploaded</th>
-                    <th className="text-left p-3 text-sm font-medium text-muted-foreground">Size</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {uploadedDocuments.map((doc) => (
-                    <tr key={doc.id} className="border-t hover:bg-muted/50">
-                      <td className="p-3">
-                        <div className="flex items-center">
-                          {doc.name.endsWith('.pdf') ? (
-                            <FileText className="h-5 w-5 text-red-500 mr-2" />
-                          ) : (
-                            <FileText className="h-5 w-5 text-blue-500 mr-2" />
-                          )}
-                          <span className="text-sm">{doc.name}</span>
-                        </div>
-                      </td>
-                      <td className="p-3 text-sm">{doc.type}</td>
-                      <td className="p-3 text-sm">{doc.uploadedAt}</td>
-                      <td className="p-3 text-sm">{doc.size}</td>
+              {isDocumentsLoading ? (
+                <div className="p-4 space-y-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : filteredAndSortedDocuments.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  <p>No documents found</p>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Document</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Uploaded</th>
+                      <th className="text-right p-3 text-sm font-medium text-muted-foreground">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredAndSortedDocuments.map((doc) => (
+                      <tr key={doc.id} className="border-t hover:bg-muted/50">
+                        <td className="p-3">
+                          <div className="flex items-center">
+                            {doc.document_extension_type === 'pdf' ? (
+                              <FileText className="h-5 w-5 text-red-500 mr-2" />
+                            ) : (
+                              <FileText className="h-5 w-5 text-blue-500 mr-2" />
+                            )}
+                            <span className="text-sm">{doc.file_name}</span>
+                          </div>
+                        </td>
+                        <td className="p-3 text-sm">{doc.document_type_name}</td>
+                        <td className="p-3 text-sm">{formatDate(doc.uploaded_at)}</td>
+                        <td className="p-3 text-sm text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => viewDocument(doc)}
+                              title="View document"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => downloadDocument(doc)}
+                              title="Download document"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => deleteDocument(doc)}
+                              disabled={isDeleting}
+                              title="Delete document"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -192,57 +486,26 @@ export default function UploadPage() {
                 <FormField
                   control={form.control}
                   name="documentType"
-                  render={({ field }) => {
-                    const { standardTypes, fetchStandardTypes, isLoading: contextLoading } = useMedicalAssistant();
-                    const [typesLoading, setTypesLoading] = useState(true);
-                    
-                    useEffect(() => {
-                      const loadTypes = async () => {
-                        setTypesLoading(true);
-                        try {
-                          // If types are already loaded in context, use them
-                          if (standardTypes.length === 0) {
-                            await fetchStandardTypes();
-                          }
-                          // Set the first type as default if available and not already set
-                          if (standardTypes.length > 0 && !field.value) {
-                            field.onChange(standardTypes[0].id);
-                          }
-                        } catch (error) {
-                          console.error("Failed to fetch standard types:", error);
-                        } finally {
-                          setTypesLoading(false);
-                        }
-                      };
-                      
-                      loadTypes();
-                    }, [fetchStandardTypes, standardTypes.length]);
-                    
-                    return (
-                      <FormItem>
-                        <FormLabel>Standard Type</FormLabel>
-                        {typesLoading ? (
-                          <Skeleton className="h-10 w-full" />
-                        ) : (
-                          <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select the type of standard you are uploading" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {standardTypes.map((type) => (
-                                <SelectItem key={type.id} value={type.id}>
-                                  {type.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Standard Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select the type of standard you are uploading" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {standardTypes.map((type) => (
+                            <SelectItem key={type.id} value={type.id}>
+                              {type.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
 
                 <FormItem>
@@ -313,6 +576,67 @@ export default function UploadPage() {
           </CardFooter>
         </Card>
       </div>
+
+      {/* Document View Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Document Details</DialogTitle>
+            <DialogDescription>
+              View information about this document
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedDocument && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-md">
+                {selectedDocument.document_extension_type === 'pdf' ? (
+                  <FileText className="h-8 w-8 text-red-500" />
+                ) : (
+                  <FileText className="h-8 w-8 text-blue-500" />
+                )}
+                <div>
+                  <h3 className="font-medium">{selectedDocument.file_name}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedDocument.document_type_name}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium">Document ID</p>
+                  <p className="text-sm text-muted-foreground">{selectedDocument.id}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Uploaded</p>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(selectedDocument.uploaded_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => downloadDocument(selectedDocument)}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => deleteDocument(selectedDocument)}
+                  disabled={isDeleting}
+                  className="flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
