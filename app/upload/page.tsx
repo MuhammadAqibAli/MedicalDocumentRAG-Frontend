@@ -33,13 +33,14 @@ interface UploadFormValues {
 interface UploadedDocument {
   id: string
   file_name: string
-  document_type_id: string
-  document_type_name: string
+  standard_type_id: string
+  standard_type_name: string
   uploaded_at: string
+  time_ago?: string
   document_extension_type: string
 }
 
-type SortField = 'file_name' | 'document_type_name' | 'uploaded_at';
+type SortField = 'file_name' | 'standard_type_name' | 'uploaded_at';
 type SortDirection = 'asc' | 'desc';
 type FilterType = 'all' | 'pdf' | 'docx' | string;
 
@@ -302,7 +303,7 @@ export default function UploadPage() {
         filtered = filtered.filter(doc => doc.document_extension_type === filterType)
       } else {
         // Filter by document type
-        filtered = filtered.filter(doc => doc.document_type_id === filterType)
+        filtered = filtered.filter(doc => doc.standard_type_id === filterType)
       }
     }
     
@@ -312,8 +313,8 @@ export default function UploadPage() {
       
       if (sortField === 'file_name') {
         comparison = a.file_name.localeCompare(b.file_name)
-      } else if (sortField === 'document_type_name') {
-        comparison = a.document_type_name.localeCompare(b.document_type_name)
+      } else if (sortField === 'standard_type_name') {
+        comparison = a.standard_type_name.localeCompare(b.standard_type_name)
       } else if (sortField === 'uploaded_at') {
         comparison = new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime()
       }
@@ -335,9 +336,9 @@ export default function UploadPage() {
       <h1 className="text-2xl font-bold mb-2">Document Upload</h1>
       <p className="text-muted-foreground mb-6">Upload and manage your standard documents</p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left Column - Uploaded Documents */}
-        <Card>
+      <div className="grid grid-cols-10 gap-6">
+        {/* Left Column - Uploaded Documents (70%) */}
+        <Card className="col-span-7">
           <CardHeader className="pb-3">
             <CardTitle>Uploaded Documents</CardTitle>
             <div className="flex justify-end gap-2">
@@ -385,14 +386,14 @@ export default function UploadPage() {
                       Name {getSortIcon('file_name')}
                     </div>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSort('document_type_name')}>
+                  <DropdownMenuItem onClick={() => handleSort('standard_type_name')}>
                     <div className="flex items-center">
-                      Type {getSortIcon('document_type_name')}
+                      Type {getSortIcon('standard_type_name')}
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleSort('uploaded_at')}>
                     <div className="flex items-center">
-                      Date Uploaded {getSortIcon('uploaded_at')}
+                      Date {getSortIcon('uploaded_at')}
                     </div>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -434,8 +435,8 @@ export default function UploadPage() {
                             <span className="text-sm">{doc.file_name}</span>
                           </div>
                         </td>
-                        <td className="p-3 text-sm">{doc.document_type_name}</td>
-                        <td className="p-3 text-sm">{formatDate(doc.uploaded_at)}</td>
+                        <td className="p-3 text-sm">{doc.standard_type_name}</td>
+                        <td className="p-3 text-sm">{doc.time_ago || formatDate(doc.uploaded_at)}</td>
                         <td className="p-3 text-sm text-right">
                           <div className="flex justify-end gap-2">
                             <Button 
@@ -474,8 +475,8 @@ export default function UploadPage() {
           </CardContent>
         </Card>
 
-        {/* Right Column - Upload Document */}
-        <Card>
+        {/* Right Column - Upload Document (30%) */}
+        <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Upload Document</CardTitle>
             <CardDescription>Upload standard documents in PDF or DOCX format for processing</CardDescription>
@@ -597,7 +598,7 @@ export default function UploadPage() {
                 )}
                 <div>
                   <h3 className="font-medium">{selectedDocument.file_name}</h3>
-                  <p className="text-sm text-muted-foreground">{selectedDocument.document_type_name}</p>
+                  <p className="text-sm text-muted-foreground">{selectedDocument.standard_type_name}</p>
                 </div>
               </div>
               
