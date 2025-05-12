@@ -252,20 +252,28 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
 
     async fetchAvailableModels(): Promise<Model[]> {
       try {
-        const response = await axios.get<string[] | Model[]>(`${api.baseUrl}/models/`, {
+        const response = await axios.get<ModelsApiResponse>(`${api.baseUrl}/models/`, {
           timeout: 10000, // 10 seconds timeout
         });
         
         console.log("API response for models:", response.data);
         
-        // Handle array of strings response
+        // Handle different response formats
         if (Array.isArray(response.data)) {
+          // If response.data is an array of strings or Model objects
           return response.data.map(model => 
             typeof model === 'string' ? { name: model } : model
           );
+        } else if (response.data && typeof response.data === 'object') {
+          // If response.data is an object with a models property
+          if (response.data.models && Array.isArray(response.data.models)) {
+            return response.data.models.map(model => 
+              typeof model === 'string' ? { name: model } : model
+            );
+          }
         }
         
-        // If response is not an array, return fallback models
+        // Fallback to hardcoded models if response format is unexpected
         return [
           { name: "llama3-8b-instruct" },
           { name: "mistral-7b-instruct" },

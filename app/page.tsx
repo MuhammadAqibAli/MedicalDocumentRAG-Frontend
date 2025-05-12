@@ -11,7 +11,7 @@ export default function Home() {
       <section className="text-center max-w-3xl mx-auto mb-12">
         <h1 className="text-3xl font-bold tracking-tight mb-4">Medical Assistant for Healthcare Professionals</h1>
         <p className="text-gray-600 mb-8">
-          Upload medical documents, generate content using AI models, and manage 
+          Upload standard documents, generate content using AI models, and manage 
           your generated content efficiently.
         </p>
         
