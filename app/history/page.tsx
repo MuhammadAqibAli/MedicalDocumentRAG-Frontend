@@ -21,17 +21,17 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import axios from "axios"
 import { CKEditor } from "@ckeditor/ckeditor5-react"
 import ClassicEditor from "@ckeditor/ckeditor5-build-classic"
 import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
 import html2pdf from 'html2pdf.js'
+import { toast } from "sonner"
 
 export default function HistoryPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const { standardTypes, fetchStandardTypes, isLoading: contextLoading, error: contextError } = useMedicalAssistant()
   const [activeTab, setActiveTab] = useState("")
   const [standards, setStandards] = useState<SavedStandard[]>([])
@@ -157,18 +157,18 @@ export default function HistoryPage() {
         setSelectedStandard(response.data)
       }
       
-      toast({
-        title: "Standard updated",
-        description: "The standard has been successfully updated.",
+      // Use Sonner toast
+      toast.success("Standard Updated", {
+        description: "The standard has been successfully updated."
       })
       
       setEditDialogOpen(false)
     } catch (err) {
       console.error("Failed to update standard:", err)
-      toast({
-        title: "Update failed",
-        description: "Failed to update the standard. Please try again.",
-        variant: "destructive"
+      
+      // Use Sonner toast for error
+      toast.error("Update Failed", {
+        description: "Failed to update the standard. Please try again."
       })
     } finally {
       setIsUpdating(false)
@@ -198,18 +198,19 @@ export default function HistoryPage() {
         setSelectedStandard(standards.find(std => std.id !== standardToDelete.id) || null)
       }
       
-      toast({
-        title: "Standard deleted",
-        description: "The standard has been successfully deleted.",
+      // Use Sonner toast
+      toast.success("Standard Deleted", {
+        description: "Standard deleted successfully."
+        
       })
       
       setDeleteDialogOpen(false)
     } catch (err) {
       console.error("Failed to delete standard:", err)
-      toast({
-        title: "Delete failed",
-        description: "Failed to delete the standard. Please try again.",
-        variant: "destructive"
+      
+      // Use Sonner toast for error
+      toast.error("Delete Failed", {
+        description: "There was a problem deleting the standard. Please try again."
       })
     } finally {
       setIsDeleting(false)
@@ -230,8 +231,7 @@ export default function HistoryPage() {
     
     html2pdf().set(opt).from(element).save()
     
-    toast({
-      title: "Export started",
+    toast.success("Export started", {
       description: "Your document is being exported as PDF.",
     })
   }
