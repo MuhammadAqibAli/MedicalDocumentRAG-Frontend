@@ -15,7 +15,7 @@ import { FileUp, AlertCircle, CheckCircle2, FileText, Filter, ArrowUpDown, Downl
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -129,15 +129,18 @@ export default function UploadPage() {
       window.document.body.removeChild(link)
       
       toast({
-        title: "Success",
-        description: "Document download started.",
+        title: "Download Started",
+        description: "Download started successfully.",
+        className: "bg-green-50 border-green-200",
+
       })
     } catch (error) {
       console.error('Failed to download document:', error)
+      
       toast({
-        title: "Error",
-        description: "Failed to download document. Please try again.",
-        variant: "destructive"
+        title: "Download Failed",
+        description: "There was a problem downloading the document. Please try again.",
+        variant: "destructive",
       })
     }
   }
@@ -157,15 +160,17 @@ export default function UploadPage() {
         }
         
         toast({
-          title: "Success",
+          title: "Document Deleted",
           description: "Document deleted successfully.",
+          className: "bg-green-50 border-green-200",
         })
       } catch (error) {
         console.error('Failed to delete document:', error)
+        
         toast({
-          title: "Error",
-          description: "Failed to delete document. Please try again.",
-          variant: "destructive"
+          title: "Delete Failed",
+          description: "There was a problem deleting the document. Please try again.",
+          variant: "destructive",
         })
       } finally {
         setIsDeleting(false)
@@ -174,10 +179,31 @@ export default function UploadPage() {
   }
 
   const onSubmit = async (data: UploadFormValues) => {
+    // Check if document type is selected
+    if (!data.documentType) {
+      form.setError("documentType", {
+        type: "required",
+        message: "Please select a Standard Type before uploading."
+      })
+      
+      toast({
+        title: "Missing Selection",
+        description: "Please select a Standard Type before uploading.",
+        variant: "destructive",
+      })
+      return
+    }
+    
     if (!selectedFile) {
       form.setError("root", {
         type: "required",
         message: "Please select a file to upload",
+      })
+      
+      toast({
+        title: "Missing File",
+        description: "Please select a file to upload.",
+        variant: "destructive",
       })
       return
     }
@@ -217,18 +243,22 @@ export default function UploadPage() {
         fileInputRef.current.value = ""
       }
       
+      // Success toast with green styling
       toast({
-        title: "Success",
+        title: "Upload Successful",
         description: "Document uploaded successfully.",
+        variant: "default",
+        className: "bg-green-50 border-green-200",
       })
     } catch (error) {
       clearInterval(progressInterval)
       setUploadProgress(0)
       
+      // Error toast with red styling
       toast({
-        title: "Error",
-        description: "Failed to upload document. Please try again.",
-        variant: "destructive"
+        title: "Upload Failed",
+        description: "There was a problem uploading your document. Please try again.",
+        variant: "destructive",
       })
     }
   }
@@ -246,6 +276,12 @@ export default function UploadPage() {
         })
         e.target.value = ""
         setSelectedFile(null)
+        
+        toast({
+          title: "Invalid File Format",
+          description: "Only PDF and DOCX files are allowed.",
+          variant: "destructive",
+        })
         return
       }
 
@@ -514,7 +550,15 @@ export default function UploadPage() {
                   <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <FileUp className="h-10 w-10 text-blue-500 mb-2" />
-                      <Button variant="ghost" className="text-blue-500" onClick={() => fileInputRef.current?.click()}>
+                      <Button 
+                        variant="ghost" 
+                        className="text-blue-500" 
+                        onClick={(e) => {
+                          e.preventDefault(); // Prevent form submission
+                          fileInputRef.current?.click();
+                        }}
+                        type="button" // Explicitly set type to button to prevent form submission
+                      >
                         Choose File
                       </Button>
                       <p className="text-sm text-muted-foreground mt-2">Upload a PDF or DOCX file (max 10MB)</p>
