@@ -240,13 +240,22 @@ export default function GeneratePage() {
   const copyToClipboard = () => {
     if (editorContent) {
       navigator.clipboard.writeText(editorContent)
-      alert("Content copied to clipboard")
+      toast({
+        title: "Content Copied",
+        description: "Content has been copied to clipboard.",
+        className: "bg-green-50 border-green-200 text-green-800",
+      })
     }
   }
 
   const downloadAsPDF = async () => {
     if (!editorContent) {
-      alert("No content to download");
+      toast({
+        title: "No Content",
+        description: "No content to download.",
+        variant: "destructive",
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
       return;
     }
 
@@ -292,15 +301,32 @@ export default function GeneratePage() {
       // Save the PDF
       const fileName = `${form.getValues().topic || 'document'}.pdf`;
       pdf.save(fileName);
+
+      // Add success toast notification
+      toast({
+        title: "Download Started",
+        description: `${fileName} is being downloaded.`,
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
     } catch (error) {
       console.error("PDF generation failed:", error);
-      alert("Failed to generate PDF. Please try again.");
+      toast({
+        title: "Download Failed",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
     }
   }
 
   const saveContent = async () => {
     if (!editorContent) {
-      alert("No content to save");
+      toast({
+        title: "No Content",
+        description: "No content to save.",
+        variant: "destructive",
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
       return;
     }
 
@@ -334,6 +360,7 @@ export default function GeneratePage() {
       toast({
         title: "Content saved successfully",
         description: `"${savedStandard.standard_title}" has been saved.`,
+        className: "bg-green-50 border-green-200 text-green-800",
       });
       
     } catch (error) {
@@ -362,7 +389,8 @@ export default function GeneratePage() {
       toast({
         title: "Missing Documents",
         description: "Both Current Document and Historical Document are required for comparison.",
-        variant: "destructive"
+        variant: "destructive",
+        className: "bg-red-50 border-red-200 text-red-800",
       });
       return;
     }
@@ -386,7 +414,8 @@ export default function GeneratePage() {
       toast({
         title: "Comparison Failed",
         description: "An error occurred while comparing the documents. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     } finally {
       setIsComparing(false);
@@ -727,7 +756,8 @@ export default function GeneratePage() {
                       toast({
                         title: "Standard Type Required",
                         description: "Please select a Standard Type from Content Generation.",
-                        variant: "destructive"
+                        variant: "destructive",
+                        className: "bg-yellow-50 border-yellow-200 text-yellow-800",
                       });
                       return;
                     }
