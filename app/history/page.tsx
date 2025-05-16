@@ -29,6 +29,13 @@ import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
 import html2pdf from 'html2pdf.js'
 import { toast } from "sonner"
+import { BrainCircuit } from "lucide-react"
+import dynamic from "next/dynamic"
+
+// Import ReactFlow components dynamically to avoid SSR issues
+const MindMapEditor = dynamic(() => import("@/components/mind-map-editor"), { 
+  ssr: false 
+})
 
 export default function HistoryPage() {
   const router = useRouter()
@@ -50,6 +57,8 @@ export default function HistoryPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [standardToDelete, setStandardToDelete] = useState<SavedStandard | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [mindMapDialogOpen, setMindMapDialogOpen] = useState(false)
+  const [mindMapStandard, setMindMapStandard] = useState<SavedStandard | null>(null)
 
   // Initialize tabs based on standard types
   useEffect(() => {
@@ -236,6 +245,11 @@ export default function HistoryPage() {
     })
   }
 
+  const handleMindMap = (standard: SavedStandard) => {
+    setMindMapStandard(standard)
+    setMindMapDialogOpen(true)
+  }
+
   // Filter standards based on search term
   const filteredStandards = standards.filter(standard => 
     standard.standard_title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -319,6 +333,10 @@ export default function HistoryPage() {
                               <DropdownMenuItem onClick={() => handleEdit(standard)}>
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleMindMap(standard)}>
+                                <BrainCircuit className="h-4 w-4 mr-2" />
+                                Mind Map
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDelete(standard)}>
                                 <Trash2 className="h-4 w-4 mr-2" />
@@ -473,6 +491,62 @@ export default function HistoryPage() {
               {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mind Map Dialog */}
+      <Dialog open={mindMapDialogOpen} onOpenChange={setMindMapDialogOpen}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] w-[90vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="px-4 pt-4 pb-4 flex-shrink-0">
+            <DialogTitle>Mind Map Editor: {mindMapStandard?.standard_title}</DialogTitle>
+          </DialogHeader>
+          {mindMapStandard && (
+            <div className="flex-1 overflow-hidden">
+              <MindMapEditor 
+                standard={mindMapStandard}
+                onSave={async (updatedContent, updatedTitle) => {
+                  if (!mindMapStandard) return
+                  
+                  setIsUpdating(true)
+                  
+                  try {
+                    const response = await axios.put(`http://127.0.0.1:8000/api/standards/${mindMapStandard.id}/`, {
+                      standard_title: updatedTitle || mindMapStandard.standard_title,
+                      content: updatedContent,
+                      version: mindMapStandard.version
+                    })
+                    
+                    // Update the standards list with the updated standard
+                    setStandards(prevStandards => 
+                      prevStandards.map(std => 
+                        std.id === mindMapStandard.id ? response.data : std
+                      )
+                    )
+                    
+                    // Update selected standard if it's the one being edited
+                    if (selectedStandard?.id === mindMapStandard.id) {
+                      setSelectedStandard(response.data)
+                    }
+                    
+                    toast.success("Mind Map Updated", {
+                      description: "The document has been successfully updated from mind map."
+                    })
+                    
+                    setMindMapDialogOpen(false)
+                  } catch (err) {
+                    console.error("Failed to update standard:", err)
+                    
+                    toast.error("Update Failed", {
+                      description: "Failed to update the document. Please try again."
+                    })
+                  } finally {
+                    setIsUpdating(false)
+                  }
+                }}
+                onCancel={() => setMindMapDialogOpen(false)}
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
