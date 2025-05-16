@@ -9,6 +9,19 @@ export function parseHtmlToMindMap(htmlContent: string, documentTitle?: string):
   const nodes: Node[] = []
   const edges: Edge[] = []
   
+  // Define node colors
+  const rootColor = { bg: '#3949ab', border: '#283593', text: '#ffffff' }
+  const categoryColors = [
+    { bg: '#795548', border: '#5d4037', text: '#ffffff' }, // Brown
+    { bg: '#2196f3', border: '#1976d2', text: '#ffffff' }, // Blue
+    { bg: '#ff9800', border: '#f57c00', text: '#000000' }, // Orange
+    { bg: '#4caf50', border: '#388e3c', text: '#ffffff' }, // Green
+    { bg: '#9c27b0', border: '#7b1fa2', text: '#ffffff' }, // Purple
+    { bg: '#00bcd4', border: '#0097a7', text: '#ffffff' }, // Cyan
+    { bg: '#f44336', border: '#d32f2f', text: '#ffffff' }, // Red
+    { bg: '#ffc107', border: '#ffa000', text: '#000000' }  // Yellow
+  ]
+  
   // Create root node
   const rootId = "root"
   const title = documentTitle || doc.querySelector('h1')?.textContent || "Document Title"
@@ -16,7 +29,10 @@ export function parseHtmlToMindMap(htmlContent: string, documentTitle?: string):
   nodes.push({
     id: rootId,
     type: 'editableNode',
-    data: { label: title },
+    data: { 
+      label: title,
+      color: rootColor
+    },
     position: { x: 400, y: 0 }
   })
   
@@ -24,13 +40,21 @@ export function parseHtmlToMindMap(htmlContent: string, documentTitle?: string):
   const mainHeadings = doc.querySelectorAll('h2')
   const mainCategories = Array.from(mainHeadings).map((heading, index) => {
     const nodeId = `category-${index}`
-    const xPos = 150 * (index - (mainHeadings.length / 2)) + 400
+    const categoryColor = categoryColors[index % categoryColors.length]
+    
+    // Calculate positions in a horizontal layout
+    const totalCategories = mainHeadings.length
+    const spacing = 1000 / (totalCategories + 1)
+    const xPos = 100 + (index * spacing)
     
     nodes.push({
       id: nodeId,
       type: 'editableNode',
-      data: { label: heading.textContent || `Category ${index + 1}` },
-      position: { x: xPos, y: 120 }
+      data: { 
+        label: heading.textContent || `Category ${index + 1}`,
+        color: categoryColor
+      },
+      position: { x: xPos, y: 150 }
     })
     
     edges.push({
@@ -43,14 +67,19 @@ export function parseHtmlToMindMap(htmlContent: string, documentTitle?: string):
       }
     })
     
-    return { id: nodeId, element: heading }
+    return { id: nodeId, element: heading, color: categoryColor }
   })
   
-  // Process subheadings and paragraphs
+  // Process subcategories and content
   mainCategories.forEach((category, catIndex) => {
-    const nextCategoryElement = mainCategories[catIndex + 1]?.element
     let currentElement = category.element.nextElementSibling
     let subIndex = 0
+    
+    // Find the next category heading (if any)
+    const nextCategoryElement = mainCategories[catIndex + 1]?.element
+    
+    // Track subcategory nodes for this category
+    const subcategoryNodes = []
     
     while (currentElement && currentElement !== nextCategoryElement) {
       if (currentElement.tagName === 'H3' || currentElement.tagName === 'P') {
@@ -59,18 +88,28 @@ export function parseHtmlToMindMap(htmlContent: string, documentTitle?: string):
         
         // Skip empty nodes
         if (text) {
-          const xPos = 150 * (catIndex - (mainCategories.length / 2)) + 400
-          const yPos = 200 + (subIndex * 80)
+          // Calculate positions in a vertical layout
+          const yPos = 250 + (subIndex * 100)
           
-          nodes.push({
+          // Get parent position
+          const parentNode = nodes.find(n => n.id === category.id)
+          if (!parentNode) continue
+          
+          const xPos = parentNode.position.x
+          
+          const node = {
             id: nodeId,
             type: 'editableNode',
             data: { 
               label: text,
-              elementType: currentElement.tagName.toLowerCase()
+              elementType: currentElement.tagName.toLowerCase(),
+              color: category.color // Use the same color as the parent category
             },
             position: { x: xPos, y: yPos }
-          })
+          }
+          
+          nodes.push(node)
+          subcategoryNodes.push(node)
           
           edges.push({
             id: `edge-${category.id}-${nodeId}`,
@@ -87,6 +126,24 @@ export function parseHtmlToMindMap(htmlContent: string, documentTitle?: string):
       }
       
       currentElement = currentElement.nextElementSibling
+    }
+    
+    // Adjust positions to avoid overlaps
+    if (subcategoryNodes.length > 0) {
+      const parentNode = nodes.find(n => n.id === category.id)
+      if (parentNode) {
+        // Center parent node above its children
+        const minX = Math.min(...subcategoryNodes.map(n => n.position.x))
+        const maxX = Math.max(...subcategoryNodes.map(n => n.position.x))
+        parentNode.position.x = (minX + maxX) / 2
+        
+        // Spread children horizontally
+        const width = Math.max(800 / mainCategories.length, 200)
+        subcategoryNodes.forEach((node, i) => {
+          const offset = (i - (subcategoryNodes.length - 1) / 2) * (width / subcategoryNodes.length)
+          node.position.x = parentNode.position.x + offset
+        })
+      }
     }
   })
   
@@ -362,6 +419,8 @@ export function convertMindMapToHtml(nodes: Node[], edges: Edge[]): string {
   
   return buildHtml("root", 0)
 }
+
+
 
 
 

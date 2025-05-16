@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useCallback, useEffect, useState } from "react"
 import ReactFlow, {
   Node,
   Edge,
@@ -12,8 +12,6 @@ import ReactFlow, {
   Connection,
   MarkerType,
   Panel,
-  NodeChange,
-  EdgeChange,
   NodeTypes
 } from "reactflow"
 import "reactflow/dist/style.css"
@@ -46,6 +44,8 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
   // Parse HTML content to mind map nodes and edges
   useEffect(() => {
     const { nodes: parsedNodes, edges: parsedEdges } = parseHtmlToMindMap(standard.content, standard.standard_title)
+    
+    // Add callbacks to nodes
     setNodes(parsedNodes.map(node => ({
       ...node,
       type: 'editableNode',
@@ -55,17 +55,42 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
         onAddChild: addChildNode
       }
     })))
-    setEdges(parsedEdges)
+    
+    // Style edges based on source node color
+    setEdges(parsedEdges.map(edge => {
+      const sourceNode = parsedNodes.find(n => n.id === edge.source)
+      const edgeColor = sourceNode?.data?.color?.border || '#f8bb4c'
+      
+      return {
+        ...edge,
+        style: { stroke: edgeColor, strokeWidth: 2 },
+        animated: true,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: edgeColor
+        }
+      }
+    }))
   }, [standard.content, standard.standard_title, setNodes, setEdges])
   
   // Handle connections between nodes
   const onConnect = useCallback(
-    (connection: Connection) => setEdges((eds) => addEdge({
-      ...connection,
-      type: 'smoothstep',
-      markerEnd: { type: 'arrowclosed' }
-    }, eds)),
-    [setEdges]
+    (connection: Connection) => {
+      const sourceNode = nodes.find(n => n.id === connection.source)
+      const edgeColor = sourceNode?.data?.color?.border || '#f8bb4c'
+      
+      setEdges((eds) => addEdge({
+        ...connection,
+        type: 'smoothstep',
+        animated: true,
+        style: { stroke: edgeColor, strokeWidth: 2 },
+        markerEnd: { 
+          type: MarkerType.ArrowClosed,
+          color: edgeColor
+        }
+      }, eds))
+    },
+    [nodes, setEdges]
   )
   
   // Handle saving the mind map
@@ -126,6 +151,9 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
       position.x += (existingChildren.length * 60)
     }
     
+    // Use the same color as the parent
+    const nodeColor = parentNode.data.color
+    
     setNodes(nds => [
       ...nds,
       {
@@ -136,11 +164,14 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
           content: '',
           isEditing: true,
           onDelete: deleteNode,
-          onAddChild: addChildNode
+          onAddChild: addChildNode,
+          color: nodeColor
         },
         position
       }
     ])
+    
+    const edgeColor = nodeColor?.border || '#f8bb4c'
     
     setEdges(eds => [
       ...eds,
@@ -149,7 +180,12 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
         source: parentId,
         target: newNodeId,
         type: 'smoothstep',
-        markerEnd: { type: 'arrowclosed' }
+        animated: true,
+        style: { stroke: edgeColor, strokeWidth: 2 },
+        markerEnd: { 
+          type: MarkerType.ArrowClosed,
+          color: edgeColor
+        }
       }
     ])
   }, [nodes, edges, setNodes, setEdges])
@@ -224,23 +260,40 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
           minZoom={0.5}
           maxZoom={1.5}
           fitViewOptions={{ padding: 0.2 }}
-          style={{ height: '100%' }}
+          style={{ 
+            height: '100%',
+            background: '#1e1e2f' // Dark background like in the image
+          }}
         >
-          <Controls />
-          <Background gap={16} size={1} />
+          <Controls className="bg-white bg-opacity-80" />
+          <Background 
+            gap={16} 
+            size={1} 
+            color="#ffffff" 
+            style={{ opacity: 0.05 }}
+          />
           <Panel position="top-right" className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={addNode}>
+            <Button size="sm" variant="outline" className="bg-white bg-opacity-90" onClick={addNode}>
               <Plus className="h-4 w-4 mr-1" />
               Add Node
             </Button>
-            <Button size="sm" variant="outline" onClick={() => {
+            <Button size="sm" variant="outline" className="bg-white bg-opacity-90" onClick={() => {
               // Reset to original layout
-              const { nodes: parsedNodes, edges: parsedEdges } = parseHtmlToMindMap(standard.content)
+              const { nodes: parsedNodes, edges: parsedEdges } = parseHtmlToMindMap(standard.content, standard.standard_title)
               setNodes(parsedNodes.map(node => ({
                 ...node,
-                type: 'editableNode'
+                type: 'editableNode',
+                data: {
+                  ...node.data,
+                  onDelete: deleteNode,
+                  onAddChild: addChildNode
+                }
               })))
-              setEdges(parsedEdges)
+              setEdges(parsedEdges.map(edge => ({
+                ...edge,
+                style: { stroke: '#f8bb4c', strokeWidth: 2 },
+                animated: true
+              })))
             }}>
               Reset Layout
             </Button>
@@ -250,6 +303,8 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
     </div>
   )
 }
+
+
 
 
 
