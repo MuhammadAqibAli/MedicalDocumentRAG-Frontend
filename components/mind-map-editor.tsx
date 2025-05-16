@@ -17,7 +17,7 @@ import ReactFlow, {
 import "reactflow/dist/style.css"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Save, X, Plus, Edit } from "lucide-react"
+import { Save, X, Plus, Edit, RotateCcw } from "lucide-react"
 import { parseHtmlToMindMap, convertMindMapToHtml } from "@/lib/mind-map-utils"
 import EditableNode from "@/components/editable-node"
 
@@ -218,37 +218,20 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
         source: parentId,
         target: newNodeId,
         type: 'smoothstep',
-        markerEnd: { type: 'arrowclosed' }
+        animated: true,
+        style: { stroke: '#f8bb4c', strokeWidth: 2 },
+        markerEnd: { 
+          type: MarkerType.ArrowClosed,
+          color: '#f8bb4c'
+        }
       }
     ])
   }, [nodes, setNodes, setEdges, deleteNode, addChildNode])
   
   return (
     <div className="w-full h-full flex flex-col">
-      {/* Top section - 10% height */}
-      <div className="p-2 border-b flex justify-between items-center h-[10%] min-h-[60px]">
-        <div className="flex items-center gap-2 flex-1">
-          <label className="text-sm font-medium">Title:</label>
-          <Input 
-            value={title} 
-            onChange={(e) => setTitle(e.target.value)} 
-            className="max-w-md"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onCancel}>
-            <X className="h-4 w-4 mr-2" />
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>
-            <Save className="h-4 w-4 mr-2" />
-            Save
-          </Button>
-        </div>
-      </div>
-      
-      {/* Editor section - 90% height */}
-      <div className="flex-1 w-full h-[90%]">
+      {/* Editor section - takes most of the height */}
+      <div className="flex-1 w-full">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -262,7 +245,7 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
           fitViewOptions={{ padding: 0.2 }}
           style={{ 
             height: '100%',
-            background: '#1e1e2f' // Dark background like in the image
+            background: '#000000' // Black background
           }}
         >
           <Controls className="bg-white bg-opacity-80" />
@@ -295,10 +278,33 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
                 animated: true
               })))
             }}>
+              <RotateCcw className="h-4 w-4 mr-1" />
               Reset Layout
             </Button>
           </Panel>
         </ReactFlow>
+      </div>
+      
+      {/* Bottom section with title and buttons */}
+      <div className="p-2 border-t flex justify-between items-center min-h-[60px]">
+        <div className="flex items-center gap-2 flex-1">
+          <label className="text-sm font-medium">Title:</label>
+          <Input 
+            value={title} 
+            onChange={(e) => setTitle(e.target.value)} 
+            className="max-w-md"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onCancel}>
+            <X className="h-4 w-4 mr-2" />
+            Cancel
+          </Button>
+          <Button onClick={handleSave}>
+            <Save className="h-4 w-4 mr-2" />
+            Save
+          </Button>
+        </div>
       </div>
     </div>
   )
