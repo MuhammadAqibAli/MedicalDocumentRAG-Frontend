@@ -2,7 +2,7 @@ import  { Node, Edge, MarkerType } from 'reactflow'
 
 
 // Parse HTML content to mind map nodes and edges
-export function parseHtmlToMindMap(htmlContent: string): { nodes: Node[], edges: Edge[] } {
+export function parseHtmlToMindMap(htmlContent: string, documentTitle?: string): { nodes: Node[], edges: Edge[] } {
   const parser = new DOMParser()
   const doc = parser.parseFromString(htmlContent, "text/html")
   
@@ -11,7 +11,7 @@ export function parseHtmlToMindMap(htmlContent: string): { nodes: Node[], edges:
   
   // Create root node
   const rootId = "root"
-  const title = doc.querySelector('h1')?.textContent || "Cold Chain Management Policy"
+  const title = documentTitle || doc.querySelector('h1')?.textContent || "Document Title"
   
   nodes.push({
     id: rootId,
@@ -362,5 +362,6 @@ export function convertMindMapToHtml(nodes: Node[], edges: Edge[]): string {
   
   return buildHtml("root", 0)
 }
+
 
 

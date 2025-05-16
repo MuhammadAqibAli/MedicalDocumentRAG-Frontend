@@ -45,20 +45,25 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
   
   // Parse HTML content to mind map nodes and edges
   useEffect(() => {
-    const { nodes: parsedNodes, edges: parsedEdges } = parseHtmlToMindMap(standard.content)
+    const { nodes: parsedNodes, edges: parsedEdges } = parseHtmlToMindMap(standard.content, standard.standard_title)
     setNodes(parsedNodes.map(node => ({
       ...node,
-      type: 'editableNode'
+      type: 'editableNode',
+      data: {
+        ...node.data,
+        onDelete: deleteNode,
+        onAddChild: addChildNode
+      }
     })))
     setEdges(parsedEdges)
-  }, [standard.content, setNodes, setEdges])
+  }, [standard.content, standard.standard_title, setNodes, setEdges])
   
   // Handle connections between nodes
   const onConnect = useCallback(
     (connection: Connection) => setEdges((eds) => addEdge({
       ...connection,
       type: 'smoothstep',
-      markerEnd: { type: MarkerType.ArrowClosed }
+      markerEnd: { type: 'arrowclosed' }
     }, eds)),
     [setEdges]
   )
@@ -69,9 +74,89 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
     onSave(updatedContent, title)
   }
 
-  // Add a new node
+  // Delete a node and its connected edges
+  const deleteNode = useCallback((nodeId: string) => {
+    // Find all connected edges
+    const edgesToRemove = edges.filter(
+      edge => edge.source === nodeId || edge.target === nodeId
+    )
+    
+    // Find all child nodes (recursively)
+    const getChildNodeIds = (parentId: string): string[] => {
+      const childEdges = edges.filter(edge => edge.source === parentId)
+      const childIds = childEdges.map(edge => edge.target)
+      
+      return [
+        ...childIds,
+        ...childIds.flatMap(id => getChildNodeIds(id))
+      ]
+    }
+    
+    const childNodeIds = getChildNodeIds(nodeId)
+    
+    // Remove the node, its children, and all connected edges
+    setNodes(nodes => nodes.filter(node => 
+      node.id !== nodeId && !childNodeIds.includes(node.id)
+    ))
+    
+    setEdges(edges => edges.filter(edge => 
+      edge.source !== nodeId && 
+      edge.target !== nodeId && 
+      !childNodeIds.includes(edge.source) && 
+      !childNodeIds.includes(edge.target)
+    ))
+  }, [nodes, edges, setNodes, setEdges])
+
+  // Add a child node to a specific parent
+  const addChildNode = useCallback((parentId: string) => {
+    const newNodeId = `node-${Date.now()}`
+    const parentNode = nodes.find(n => n.id === parentId)
+    
+    if (!parentNode) return
+    
+    // Calculate position based on parent
+    const position = {
+      x: parentNode.position.x,
+      y: parentNode.position.y + 120
+    }
+    
+    // Adjust position if there are other children
+    const existingChildren = edges.filter(e => e.source === parentId)
+    if (existingChildren.length > 0) {
+      position.x += (existingChildren.length * 60)
+    }
+    
+    setNodes(nds => [
+      ...nds,
+      {
+        id: newNodeId,
+        type: 'editableNode',
+        data: { 
+          label: 'New Node', 
+          content: '',
+          isEditing: true,
+          onDelete: deleteNode,
+          onAddChild: addChildNode
+        },
+        position
+      }
+    ])
+    
+    setEdges(eds => [
+      ...eds,
+      {
+        id: `edge-${parentId}-${newNodeId}`,
+        source: parentId,
+        target: newNodeId,
+        type: 'smoothstep',
+        markerEnd: { type: 'arrowclosed' }
+      }
+    ])
+  }, [nodes, edges, setNodes, setEdges])
+
+  // Add a new node (to root by default)
   const addNode = useCallback(() => {
-    const newNodeId = `node-${nodes.length + 1}`
+    const newNodeId = `node-${Date.now()}`
     const parentId = nodes.find(n => n.id === 'root')?.id || 'root'
     
     setNodes(nds => [
@@ -79,7 +164,13 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
       {
         id: newNodeId,
         type: 'editableNode',
-        data: { label: 'New Node', isEditing: true },
+        data: { 
+          label: 'New Node', 
+          content: '',
+          isEditing: true,
+          onDelete: deleteNode,
+          onAddChild: addChildNode
+        },
         position: { x: 250, y: 100 + nodes.length * 80 }
       }
     ])
@@ -91,10 +182,10 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
         source: parentId,
         target: newNodeId,
         type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed }
+        markerEnd: { type: 'arrowclosed' }
       }
     ])
-  }, [nodes, setNodes, setEdges])
+  }, [nodes, setNodes, setEdges, deleteNode, addChildNode])
   
   return (
     <div className="w-full h-full flex flex-col">
@@ -159,6 +250,7 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
     </div>
   )
 }
+
 
 
 
