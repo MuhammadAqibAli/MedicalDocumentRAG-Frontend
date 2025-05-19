@@ -3,6 +3,7 @@ import { Handle, Position, NodeProps } from 'reactflow'
 import { Input } from "@/components/ui/input"
 import { Edit, Check, Trash2, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { SavedStandard } from "@/context/medical-assistant-context"
 
 // Define color themes for different node categories
 const nodeColors = {
@@ -17,6 +18,23 @@ const nodeColors = {
     { bg: '#f44336', border: '#d32f2f', text: '#ffffff' }, // Red
     { bg: '#ffc107', border: '#ffa000', text: '#000000' }  // Yellow
   ]
+}
+
+interface NodeData {
+  label: string
+  color?: {
+    bg: string
+    border: string
+    text: string
+  }
+  onDelete?: (id: string) => void
+  onAddChild?: (parentId: string) => void
+  isEditing?: boolean
+  elementType?: string
+  isRoot?: boolean
+  isCategory?: boolean
+  standard?: SavedStandard
+  onClick?: () => void
 }
 
 export default function EditableNode({ data, id, isConnectable }: NodeProps) {
@@ -49,18 +67,26 @@ export default function EditableNode({ data, id, isConnectable }: NodeProps) {
   const isRoot = id === 'root'
   
   return (
-    <div 
-      className="rounded-md shadow-md border"
-      style={{ 
-        minWidth: 180, 
+    <div
+      className={`px-4 py-2 shadow-md rounded-md border-2 ${
+        data.onClick ? "cursor-pointer" : ""
+      }`}
+      style={{
+        minWidth: 180,
         maxWidth: 280,
         backgroundColor: nodeColor.bg,
         borderColor: nodeColor.border,
         color: nodeColor.text,
-        padding: '10px',
-        transition: 'all 0.2s ease'
+        transition: 'all 0.2s ease',
+        ...(data.onClick && { borderColor: 'blue', borderWidth: '2px' })
       }}
       onDoubleClick={handleDoubleClick}
+      onClick={(e) => {
+        if (data.onClick) {
+          e.stopPropagation()
+          data.onClick()
+        }
+      }}
     >
       <Handle 
         type="target" 

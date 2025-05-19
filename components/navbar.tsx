@@ -4,26 +4,15 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { FileText, FileUp, History, Menu, Sparkles } from "lucide-react"
+import { FileUp, History, Menu, Sparkles, FolderTree } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useState } from "react"
 
-const navItems = [
-  {
-    name: "Upload",
-    href: "/upload",
-    icon: <FileUp className="h-4 w-4 mr-2" />,
-  },
-  {
-    name: "Generate",
-    href: "/generate",
-    icon: <Sparkles className="h-4 w-4 mr-2" />,
-  },
-  {
-    name: "History",
-    href: "/history",
-    icon: <History className="h-4 w-4 mr-2" />,
-  },
+const navigationItems = [
+  { name: "Upload", href: "/upload", icon: FileUp },
+  { name: "Generate", href: "/generate", icon: Sparkles },
+  { name: "History", href: "/history", icon: History },
+  { name: "Document Map", href: "/document-map", icon: FolderTree }
 ]
 
 export default function Navbar() {
@@ -45,10 +34,10 @@ export default function Navbar() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">
-          {navItems.map((item) => (
+          {navigationItems.map((item) => (
             <Button key={item.href} variant={pathname === item.href ? "default" : "ghost"} asChild>
               <Link href={item.href} className="flex items-center">
-                {item.icon}
+                <item.icon className="h-5 w-5 mr-2" />
                 {item.name}
               </Link>
             </Button>
@@ -65,7 +54,7 @@ export default function Navbar() {
           </SheetTrigger>
           <SheetContent side="right">
             <nav className="flex flex-col gap-4 mt-8">
-              {navItems.map((item) => (
+              {navigationItems.map((item) => (
                 <Button
                   key={item.href}
                   variant={pathname === item.href ? "default" : "ghost"}
@@ -74,7 +63,7 @@ export default function Navbar() {
                   onClick={() => setOpen(false)}
                 >
                   <Link href={item.href} className="flex items-center">
-                    {item.icon}
+                    <item.icon className="h-5 w-5 mr-2" />
                     {item.name}
                   </Link>
                 </Button>
