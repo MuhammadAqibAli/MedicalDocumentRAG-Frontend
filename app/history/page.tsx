@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
+
 import { useRouter } from "next/navigation"
 import { useMedicalAssistant, type ContentType, type GeneratedContent, type SavedStandard } from "@/context/medical-assistant-context"
 import { Button } from "@/components/ui/button"
@@ -10,31 +11,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
-import { 
-  FileText, AlertCircle, Search, MoreVertical, 
-  Edit, Trash2, Download, X, Save 
+import {
+  FileText, AlertCircle, Search, MoreVertical,
+  Edit, Trash2, Download, X, Save
 } from "lucide-react"
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import axios from "axios"
-import { CKEditor } from "@ckeditor/ckeditor5-react"
-import ClassicEditor from "@ckeditor/ckeditor5-build-classic"
-import { jsPDF } from "jspdf"
-import html2canvas from "html2canvas"
-import html2pdf from 'html2pdf.js'
 import { toast } from "sonner"
 import { BrainCircuit } from "lucide-react"
 import dynamic from "next/dynamic"
+//import html2pdf from 'html2pdf.js'
+
+// Import TipTap editor with dynamic import to avoid SSR issues
+const TipTapEditor = dynamic(
+  () => import('@/components/TipTapEditor'),
+  { ssr: false }
+);
 
 // Import ReactFlow components dynamically to avoid SSR issues
-const MindMapEditor = dynamic(() => import("@/components/mind-map-editor"), { 
-  ssr: false 
+const MindMapEditor = dynamic(() => import("@/components/mind-map-editor"), {
+  ssr: false
 })
 
 export default function HistoryPage() {
@@ -69,7 +72,7 @@ export default function HistoryPage() {
         typeId: type.id
       }))
       setTabs(newTabs)
-      
+
       // Set active tab to the first tab if not already set
       if (!activeTab && newTabs.length > 0) {
         setActiveTab(newTabs[0].id)
@@ -87,17 +90,17 @@ export default function HistoryPage() {
   // Fetch standards based on the selected tab
   const fetchStandards = async (typeId: string) => {
     if (!typeId) return
-    
+
     setIsLoading(true)
     setError(null)
 
     try {
       const response = await axios.get(`http://127.0.0.1:8000/api/standards/?standard_type_id=${typeId}`)
-      
+
       if (Array.isArray(response.data)) {
         setStandards(response.data)
         setTotalPages(Math.ceil(response.data.length / 10) || 1)
-        
+
         // Select first item if available
         if (response.data.length > 0) {
           setSelectedStandard(response.data[0])
@@ -144,37 +147,37 @@ export default function HistoryPage() {
 
   const handleUpdate = async () => {
     if (!editingStandard) return
-    
+
     setIsUpdating(true)
-    
+
     try {
       const response = await axios.put(`http://127.0.0.1:8000/api/standards/${editingStandard.id}/`, {
         standard_title: editedTitle,
         content: editedContent,
         version: editingStandard.version // You might want to increment this
       })
-      
+
       // Update the standards list with the updated standard
-      setStandards(prevStandards => 
-        prevStandards.map(std => 
+      setStandards(prevStandards =>
+        prevStandards.map(std =>
           std.id === editingStandard.id ? response.data : std
         )
       )
-      
+
       // Update selected standard if it's the one being edited
       if (selectedStandard?.id === editingStandard.id) {
         setSelectedStandard(response.data)
       }
-      
+
       // Use Sonner toast
       toast.success("Standard Updated", {
         description: "The standard has been successfully updated."
       })
-      
+
       setEditDialogOpen(false)
     } catch (err) {
       console.error("Failed to update standard:", err)
-      
+
       // Use Sonner toast for error
       toast.error("Update Failed", {
         description: "Failed to update the standard. Please try again."
@@ -191,32 +194,32 @@ export default function HistoryPage() {
 
   const confirmDelete = async () => {
     if (!standardToDelete) return
-    
+
     setIsDeleting(true)
-    
+
     try {
       await axios.delete(`http://127.0.0.1:8000/api/standards/${standardToDelete.id}/`)
-      
+
       // Remove the deleted standard from the list
-      setStandards(prevStandards => 
+      setStandards(prevStandards =>
         prevStandards.filter(std => std.id !== standardToDelete.id)
       )
-      
+
       // If the deleted standard was selected, clear the selection
       if (selectedStandard?.id === standardToDelete.id) {
         setSelectedStandard(standards.find(std => std.id !== standardToDelete.id) || null)
       }
-      
+
       // Use Sonner toast
       toast.success("Standard Deleted", {
         description: "Standard deleted successfully."
-        
+
       })
-      
+
       setDeleteDialogOpen(false)
     } catch (err) {
       console.error("Failed to delete standard:", err)
-      
+
       // Use Sonner toast for error
       toast.error("Delete Failed", {
         description: "There was a problem deleting the standard. Please try again."
@@ -229,7 +232,7 @@ export default function HistoryPage() {
   const handleExport = (standard: SavedStandard) => {
     const element = document.createElement("div")
     element.innerHTML = standard.content
-    
+
     const opt = {
       margin: 1,
       filename: `${standard.standard_title}.pdf`,
@@ -237,9 +240,9 @@ export default function HistoryPage() {
       html2canvas: { scale: 2 },
       jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
     }
-    
-    html2pdf().set(opt).from(element).save()
-    
+
+    //html2pdf().set(opt).from(element).save()
+
     toast.success("Export started", {
       description: "Your document is being exported as PDF.",
     })
@@ -251,7 +254,7 @@ export default function HistoryPage() {
   }
 
   // Filter standards based on search term
-  const filteredStandards = standards.filter(standard => 
+  const filteredStandards = standards.filter(standard =>
     standard.standard_title.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
@@ -273,7 +276,7 @@ export default function HistoryPage() {
             <TabsTrigger key={tab.id} value={tab.id}>{tab.label}</TabsTrigger>
           ))}
         </TabsList>
-        
+
         {tabs.map(tab => (
           <TabsContent key={tab.id} value={tab.id}>
             <div className="grid grid-cols-4 gap-6">
@@ -290,7 +293,7 @@ export default function HistoryPage() {
                     />
                   </div>
                 </div>
-                
+
                 {isLoading || contextLoading ? (
                   <div className="space-y-4">
                     {[1, 2, 3].map((i) => (
@@ -313,7 +316,7 @@ export default function HistoryPage() {
                         }`}
                       >
                         <div className="flex justify-between items-start">
-                          <div 
+                          <div
                             className="flex-1 mr-2"
                             onClick={() => selectStandard(standard)}
                           >
@@ -362,7 +365,7 @@ export default function HistoryPage() {
                   </div>
                 )}
               </div>
-              
+
               <div className="col-span-3">
                 {selectedStandard ? (
                   <Card className="h-full">
@@ -379,7 +382,7 @@ export default function HistoryPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div 
+                      <div
                         className="bg-muted p-6 rounded-md h-[calc(100vh-300px)] overflow-auto"
                         dangerouslySetInnerHTML={{ __html: selectedStandard.content }}
                       />
@@ -408,44 +411,40 @@ export default function HistoryPage() {
           <DialogHeader>
             <DialogTitle>Edit Standard</DialogTitle>
           </DialogHeader>
-          
+
           <div className="flex-1 overflow-hidden flex flex-col">
             <div className="mb-4">
               <label className="text-sm font-medium mb-1 block">Title</label>
-              <Input 
-                value={editedTitle} 
-                onChange={(e) => setEditedTitle(e.target.value)} 
+              <Input
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
                 className="w-full"
               />
             </div>
-            
+
             <div className="flex-1 overflow-hidden">
               <label className="text-sm font-medium mb-1 block">Content</label>
               <div className="h-[calc(60vh-100px)] border rounded-md overflow-auto">
-                <CKEditor
-                  editor={ClassicEditor}
-                  data={editedContent}
-                  onChange={(event, editor) => {
-                    const data = editor.getData();
-                    setEditedContent(data);
-                  }}
-                  config={{
-                    toolbar: ['heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', '|', 'outdent', 'indent', '|', 'blockQuote', 'insertTable', 'undo', 'redo'],
-                  }}
+                <TipTapEditor
+                  content={editedContent}
+                  onChange={setEditedContent}
+                  editorClass="h-full"
+                  maxLength={1000000}
+                  scrollable={true}
                 />
               </div>
             </div>
-            
+
             <div className="flex justify-end gap-2 mt-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setEditDialogOpen(false)}
                 disabled={isUpdating}
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleUpdate}
                 disabled={isUpdating}
               >
@@ -469,21 +468,21 @@ export default function HistoryPage() {
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
           </DialogHeader>
-          
+
           <div className="py-4">
             <p>Are you sure you want to delete "{standardToDelete?.standard_title}"?</p>
             <p className="text-sm text-muted-foreground mt-2">This action cannot be undone.</p>
           </div>
-          
+
           <div className="flex justify-end gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
               disabled={isDeleting}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               variant="destructive"
               onClick={confirmDelete}
               disabled={isDeleting}
@@ -502,40 +501,40 @@ export default function HistoryPage() {
           </DialogHeader>
           {mindMapStandard && (
             <div className="flex-1 overflow-hidden">
-              <MindMapEditor 
+              <MindMapEditor
                 standard={mindMapStandard}
                 onSave={async (updatedContent, updatedTitle) => {
                   if (!mindMapStandard) return
-                  
+
                   setIsUpdating(true)
-                  
+
                   try {
                     const response = await axios.put(`http://127.0.0.1:8000/api/standards/${mindMapStandard.id}/`, {
                       standard_title: updatedTitle || mindMapStandard.standard_title,
                       content: updatedContent,
                       version: mindMapStandard.version
                     })
-                    
+
                     // Update the standards list with the updated standard
-                    setStandards(prevStandards => 
-                      prevStandards.map(std => 
+                    setStandards(prevStandards =>
+                      prevStandards.map(std =>
                         std.id === mindMapStandard.id ? response.data : std
                       )
                     )
-                    
+
                     // Update selected standard if it's the one being edited
                     if (selectedStandard?.id === mindMapStandard.id) {
                       setSelectedStandard(response.data)
                     }
-                    
+
                     toast.success("Mind Map Updated", {
                       description: "The document has been successfully updated from mind map."
                     })
-                    
+
                     setMindMapDialogOpen(false)
                   } catch (err) {
                     console.error("Failed to update standard:", err)
-                    
+
                     toast.error("Update Failed", {
                       description: "Failed to update the document. Please try again."
                     })

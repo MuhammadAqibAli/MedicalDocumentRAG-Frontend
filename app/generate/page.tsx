@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
+
 import { useForm } from "react-hook-form"
 import {
   useMedicalAssistant,
@@ -16,9 +17,9 @@ import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Sparkles, AlertCircle, CheckCircle2, Download, Copy, FileText, 
-  Info, Save, GitCompare, History, Search 
+import {
+  Sparkles, AlertCircle, CheckCircle2, Download, Copy, FileText,
+  Info, Save, GitCompare, History, Search
 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -28,9 +29,14 @@ import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
 import { useToast } from "@/hooks/use-toast"
 
-// Type imports for CKEditor
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
-import { CKEditor } from '@ckeditor/ckeditor5-react';
+// Import TipTap editor with dynamic import to avoid SSR issues
+import dynamic from 'next/dynamic';
+
+// Use dynamic import for TipTap editor to avoid SSR issues
+const TipTapEditor = dynamic(
+  () => import('@/components/TipTapEditor'),
+  { ssr: false }
+);
 
 interface GenerateFormValues {
   topic: string
@@ -49,11 +55,11 @@ interface DocumentItem {
 }
 
 export default function GeneratePage() {
-  const { 
-    generateContent, 
-    fetchAvailableModels, 
-    isLoading: contextLoading, 
-    error, 
+  const {
+    generateContent,
+    fetchAvailableModels,
+    isLoading: contextLoading,
+    error,
     saveStandard,
     standardTypes,
     fetchStandardTypes,
@@ -74,7 +80,7 @@ export default function GeneratePage() {
   const editorRef = useRef<any>(null)
   const editorContainerRef = useRef<HTMLDivElement>(null)
   const [documentSelectionDialogOpen, setDocumentSelectionDialogOpen] = useState(false)
-  
+
   // New state variables for standards and comparison
   const [standards, setStandards] = useState<any[]>([])
   const [isLoadingStandards, setIsLoadingStandards] = useState(false)
@@ -103,7 +109,7 @@ export default function GeneratePage() {
 
     try {
       const response = await axios.get(`http://127.0.0.1:8000/api/standards/?standard_type_id=${selectedType}`);
-      
+
       if (Array.isArray(response.data)) {
         setStandards(response.data);
       } else {
@@ -133,7 +139,7 @@ export default function GeneratePage() {
       try {
         const availableModels = await fetchAvailableModels();
         console.log("Available models:", availableModels);
-        
+
         if (Array.isArray(availableModels) && availableModels.length > 0) {
           setModels(availableModels);
           form.setValue("modelName", availableModels[0].name);
@@ -181,24 +187,24 @@ export default function GeneratePage() {
       setTimeout(() => {
         // Mock data for demonstration
         const mockDocuments: DocumentItem[] = [
-          { 
-            id: "1", 
-            title: "Diabetes Management Protocol", 
-            contentType: contentType, 
+          {
+            id: "1",
+            title: "Diabetes Management Protocol",
+            contentType: contentType,
             createdAt: new Date().toISOString(),
             content: "<p>Diabetes management protocol content...</p>"
           },
-          { 
-            id: "2", 
-            title: "Hypertension Guidelines", 
-            contentType: contentType, 
+          {
+            id: "2",
+            title: "Hypertension Guidelines",
+            contentType: contentType,
             createdAt: new Date().toISOString(),
             content: "<p>Hypertension guidelines content...</p>"
           },
-          { 
-            id: "3", 
-            title: "Asthma Treatment Plan", 
-            contentType: contentType, 
+          {
+            id: "3",
+            title: "Asthma Treatment Plan",
+            contentType: contentType,
             createdAt: new Date().toISOString(),
             content: "<p>Asthma treatment plan content...</p>"
           }
@@ -273,7 +279,7 @@ export default function GeneratePage() {
         logging: false,
         useCORS: true
       });
-      
+
       // Remove the temporary div
       document.body.removeChild(tempDiv);
 
@@ -287,14 +293,14 @@ export default function GeneratePage() {
       // Calculate dimensions to fit the canvas in A4
       const imgWidth = 210; // A4 width in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
+
       // Add the image to the PDF
       pdf.addImage(
-        canvas.toDataURL('image/png'), 
-        'PNG', 
-        0, 
-        0, 
-        imgWidth, 
+        canvas.toDataURL('image/png'),
+        'PNG',
+        0,
+        0,
+        imgWidth,
         imgHeight
       );
 
@@ -345,7 +351,7 @@ export default function GeneratePage() {
 
       // Call the API through the context
       const savedStandard = await saveStandard(standardData);
-      
+
       // Update the local state with the saved content
       const newContent = {
         id: savedStandard.id,
@@ -353,16 +359,16 @@ export default function GeneratePage() {
         content: savedStandard.content,
         date: new Date(savedStandard.created_at).toLocaleString()
       };
-      
+
       setSavedContents(prev => [...prev, newContent]);
-      
+
       // Show success message
       toast({
         title: "Content saved successfully",
         description: `"${savedStandard.standard_title}" has been saved.`,
         className: "bg-green-50 border-green-200 text-green-800",
       });
-      
+
     } catch (error) {
       console.error("Failed to save standard:", error);
       // Error is already handled by the context with toast notifications
@@ -379,7 +385,7 @@ export default function GeneratePage() {
     setEditorContent(document.content);
   }
 
-  const filteredDocuments = documents.filter(doc => 
+  const filteredDocuments = documents.filter(doc =>
     doc.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -400,7 +406,7 @@ export default function GeneratePage() {
 
     try {
       const selectedType = form.getValues().contentType;
-      
+
       const response = await axios.post('http://127.0.0.1:8000/api/standards/compare/', {
         content1: editorContent,
         content2: historyContent,
@@ -424,7 +430,7 @@ export default function GeneratePage() {
 
   const handleCompareDialogChange = (open: boolean) => {
     setCompareDialogOpen(open);
-    
+
     if (!open) {
       // Clear the comparison data when dialog is closed
       setHistoryContent("");
@@ -472,7 +478,7 @@ export default function GeneratePage() {
                     render={({ field }) => {
                       //const { standardTypes, fetchStandardTypes, isLoading: contextLoading } = useMedicalAssistant();
                       const [typesLoading, setTypesLoading] = useState(true);
-                      
+
                       useEffect(() => {
                         const loadTypes = async () => {
                           setTypesLoading(true);
@@ -491,10 +497,10 @@ export default function GeneratePage() {
                             setTypesLoading(false);
                           }
                         };
-                        
+
                         loadTypes();
                       }, [fetchStandardTypes, standardTypes.length]);
-                      
+
                       return (
                         <FormItem>
                           <FormLabel>Standard Type</FormLabel>
@@ -657,7 +663,7 @@ export default function GeneratePage() {
                   <div>
                     <CardTitle>
                       {form.getValues().topic || "New Document"}
-                      {standardTypes.find(t => t.id === form.getValues().contentType)?.name && 
+                      {standardTypes.find(t => t.id === form.getValues().contentType)?.name &&
                         ` - ${standardTypes.find(t => t.id === form.getValues().contentType)?.name}`
                       }
                     </CardTitle>
@@ -680,10 +686,10 @@ export default function GeneratePage() {
                     <Button variant="outline" size="icon" onClick={saveContent} title="Save content">
                       <Save className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      onClick={() => setCompareDialogOpen(true)} 
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCompareDialogOpen(true)}
                       title="Compare with history"
                     >
                       <GitCompare className="h-4 w-4" />
@@ -693,24 +699,19 @@ export default function GeneratePage() {
               </CardHeader>
               <CardContent className="pt-2 h-[calc(100%-80px)]">
                 <div className="h-full">
-                  <CKEditor
-                    editor={ClassicEditor}
-                    data={editorContent}
-                    onChange={(event, editor) => {
-                      const data = editor.getData();
-                      setEditorContent(data);
-                    }}
-                    config={{
-                      toolbar: ['heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', '|', 'outdent', 'indent', '|', 'blockQuote', 'insertTable', 'undo', 'redo'],
-                      height: '500px'
-                    }}
+                  <TipTapEditor
+                    content={editorContent}
+                    onChange={setEditorContent}
+                    editorClass="h-full"
+                    maxLength={1000000}
+                    scrollable={true}
                   />
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between border-t px-6 py-4">
                 <p className="text-sm text-muted-foreground">
-                  {generatedContent ? 
-                    `Generated on ${new Date(generatedContent.created_at).toLocaleString()}` : 
+                  {generatedContent ?
+                    `Generated on ${new Date(generatedContent.created_at).toLocaleString()}` :
                     "New document"}
                 </p>
               </CardFooter>
@@ -728,28 +729,26 @@ export default function GeneratePage() {
               Compare current document with a previously saved version
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid grid-cols-2 gap-4 mt-4 overflow-hidden">
             <div>
               <h3 className="text-sm font-medium mb-2">Current Document</h3>
               <div className="border rounded-md p-2 h-[300px] overflow-auto">
-                <CKEditor
-                  editor={ClassicEditor}
-                  data={editorContent}
+                <TipTapEditor
+                  content={editorContent}
                   disabled={true}
-                  config={{
-                    toolbar: [],
-                    height: '280px'
-                  }}
+                  showToolbar={false}
+                  editorClass="h-[280px]"
+                  scrollable={true}
                 />
               </div>
             </div>
             <div>
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-sm font-medium">Historical Document</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
                     const selectedType = form.getValues().contentType;
                     if (!selectedType) {
@@ -770,22 +769,20 @@ export default function GeneratePage() {
                 </Button>
               </div>
               <div className="border rounded-md p-2 h-[300px] overflow-auto">
-                <CKEditor
-                  editor={ClassicEditor}
-                  data={historyContent}
+                <TipTapEditor
+                  content={historyContent}
                   disabled={true}
-                  config={{
-                    toolbar: [],
-                    height: '280px'
-                  }}
+                  showToolbar={false}
+                  editorClass="h-[280px]"
+                  scrollable={true}
                 />
               </div>
             </div>
           </div>
-          
+
           {/* Centered Compare Button */}
           <div className="flex justify-center mt-6">
-            <Button 
+            <Button
               onClick={compareDocuments}
               disabled={isComparing}
               className="px-8"
@@ -793,12 +790,12 @@ export default function GeneratePage() {
               {isComparing ? "Comparing..." : "Compare"}
             </Button>
           </div>
-          
+
           {/* Comparison Results Viewer */}
           {showComparisonResults && (
             <div className="mt-6 border rounded-md p-4 overflow-auto flex-grow">
               <h3 className="text-lg font-medium mb-4">Comparison Results</h3>
-              
+
               {comparisonResult ? (
                 <div className="space-y-6 overflow-auto">
                   {/* Key Differences */}
@@ -822,7 +819,7 @@ export default function GeneratePage() {
                       ))}
                     </div>
                   </div>
-                  
+
                   {/* Recommendation */}
                   <div>
                     <h4 className="text-md font-medium mb-2">Recommendation</h4>
@@ -830,7 +827,7 @@ export default function GeneratePage() {
                       <p>{comparisonResult.comparison.recommendation}</p>
                     </div>
                   </div>
-                  
+
                   {/* Improvement Suggestions */}
                   <div>
                     <h4 className="text-md font-medium mb-2">Improvement Suggestions</h4>
@@ -871,7 +868,7 @@ export default function GeneratePage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             <div className="max-h-[400px] overflow-y-auto">
               {isLoadingStandards ? (
                 <div className="p-4 space-y-3">
@@ -888,12 +885,12 @@ export default function GeneratePage() {
               ) : standards.length > 0 ? (
                 <div className="space-y-2">
                   {standards
-                    .filter(standard => 
+                    .filter(standard =>
                       standard.standard_title.toLowerCase().includes(searchTerm.toLowerCase())
                     )
                     .map((standard) => (
-                      <div 
-                        key={standard.id} 
+                      <div
+                        key={standard.id}
                         className="border rounded-md p-3 cursor-pointer hover:bg-muted"
                         onClick={() => {
                           setHistoryContent(standard.content);
@@ -945,7 +942,7 @@ export default function GeneratePage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             <div className="border rounded-md">
               {documentsLoading ? (
                 <div className="p-4 space-y-3">
