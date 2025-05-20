@@ -1,6 +1,4 @@
-# Current YML for App Service (first one you posted) - with modifications
-
-name: Build and deploy Node.js app to Azure Web App - mmc
+name: Build and deploy Next.js app to Azure Web App - mmc
 
 on:
   push:
@@ -20,31 +18,121 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '20.x' # Using LTS. If 22.x is critical, you can keep it, but LTS is usually more stable.
-          cache: 'npm' # Optional: speeds up npm install
+          node-version: '20.x'
+          cache: 'npm'
 
-      - name: npm install, build, and test
-        run: |
-          npm install --force # Preferred over npm install --force if package-lock.json is reliable
-          # If npm ci fails, fix package-lock.json (npm install locally, commit lock file) then use npm ci
-          # Or, if you must: npm install --force
-          npm run build --if-present
-          npm run test --if-present # Ensure tests pass or this will stop the workflow
+      # Add Next.js build cache
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
 
-      - name: Zip artifact for deployment
+      - name: npm install and build
         run: |
-          # Option 1: Zip everything (including node_modules) - current approach
-          # zip release.zip ./* -r -x ".git/*" # Exclude .git
-          # Option 2 (Recommended for leaner deployment if Azure installs modules):
-          # Zip only necessary production files
-          mkdir deployment_package
-          cp -R .next deployment_package/
-          cp -R public deployment_package/ # If you have a public folder
-          cp package.json deployment_package/
-          cp package-lock.json deployment_package/ # Important for consistent installs on Azure
-          if [ -f next.config.js ]; then cp next.config.js deployment_package/; fi
-          # if [ -f .env.production ]; then cp .env.production deployment_package/; fi # Only if it contains NO secrets
-          cd deployment_package
+          npm install --force
+          npm run build
+        env:
+          CI: true
+          # Add any environment variables needed for build here
+          # NODE_ENV: production
+
+      - name: Prepare deployment package
+        run: |
+          # Create optimized deployment package for Azure
+          mkdir deployment
+          # Copy build output and necessary files
+          cp -r .next deployment/
+          cp -r public deployment/
+          cp package.json deployment/
+          cp package-lock.json deployment/
+          cp next.config.mjs deployment/
+          
+          # Create a server.js file for Azure App Service
+          echo 'const { createServer } = require("http");
+          const { parse } = require("url");
+          const next = require("next");
+          
+          const dev = process.env.NODE_ENV !== "production";
+          const hostname = "0.0.0.0";
+          const port = process.env.PORT || 8080;
+          
+          const app = next({ dev, hostname, port });
+          const handle = app.getRequestHandler();
+          
+          app.prepare().then(() => {
+            createServer(async (req, res) => {
+              try {
+                const parsedUrl = parse(req.url, true);
+                await handle(req, res, parsedUrl);
+              } catch (err) {
+                console.error("Error occurred handling", req.url, err);
+                res.statusCode = 500;
+                res.end("Internal Server Error");
+              }
+            })
+              .once("error", (err) => {
+                console.error(err);
+                process.exit(1);
+              })
+              .listen(port, () => {
+                console.log(`> Ready on http://${hostname}:${port}`);
+              });
+          });' > deployment/server.js
+          
+          # Create web.config for IIS
+          echo '<?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <system.webServer>
+              <webSocket enabled="false" />
+              <handlers>
+                <add name="iisnode" path="server.js" verb="*" modules="iisnode"/>
+              </handlers>
+              <rewrite>
+                <rules>
+                  <rule name="NodeInspector" patternSyntax="ECMAScript" stopProcessing="true">
+                    <match url="^server.js\/debug[\/]?" />
+                  </rule>
+                  <rule name="StaticContent">
+                    <action type="Rewrite" url="public{REQUEST_URI}"/>
+                  </rule>
+                  <rule name="DynamicContent">
+                    <conditions>
+                      <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="True"/>
+                    </conditions>
+                    <action type="Rewrite" url="server.js"/>
+                  </rule>
+                </rules>
+              </rewrite>
+              <security>
+                <requestFiltering removeServerHeader="true">
+                  <hiddenSegments>
+                    <remove segment="bin"/>
+                  </hiddenSegments>
+                </requestFiltering>
+              </security>
+              <httpErrors existingResponse="PassThrough" />
+            </system.webServer>
+          </configuration>' > deployment/web.config
+          
+          # Create a production startup script
+          echo '{
+            "scripts": {
+              "start": "node server.js"
+            }
+          }' > deployment/package.json.temp
+          
+          # Merge with existing package.json
+          jq -s '.[0] * .[1]' deployment/package.json deployment/package.json.temp > deployment/package.json.new
+          mv deployment/package.json.new deployment/package.json
+          rm deployment/package.json.temp
+          
+          # Create zip for deployment
+          cd deployment
           zip -r ../release.zip .
           cd ..
 
@@ -62,17 +150,13 @@ jobs:
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
       id-token: write
-      contents: read # Not strictly needed here if not checking out again
+      contents: read
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: node-app # This downloads release.zip
-
-      # REMOVE THIS STEP:
-      # - name: Unzip artifact for deployment
-      #  run: unzip release.zip
+          name: node-app
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -87,4 +171,4 @@ jobs:
         with:
           app-name: 'mmc'
           slot-name: 'Production'
-          package: release.zip # <--- CHANGE THIS. Deploy the zip directly.
+          package: release.zip

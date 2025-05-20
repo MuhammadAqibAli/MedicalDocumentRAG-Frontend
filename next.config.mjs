@@ -9,6 +9,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  output: 'standalone', // Optimizes for production deployment
   // Exclude browser-only libraries from server-side rendering
   webpack: (config, { isServer }) => {
     if (isServer) {
@@ -39,7 +40,8 @@ const nextConfig = {
   // Disable static optimization for pages that use CKEditor
   // This ensures they're always server-rendered during build
   reactStrictMode: true,
-  swcMinify: true
+  swcMinify: true,
+  poweredByHeader: false
 }
 
 export default nextConfig
