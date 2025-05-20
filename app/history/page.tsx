@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast"
 import axios from "axios"
 import { toast } from "sonner"
 import { BrainCircuit } from "lucide-react"
-import dynamic from "next/dynamic"
+import dynamic from "next/dynamic";
 //import html2pdf from 'html2pdf.js'
 
 // Import TipTap editor with dynamic import to avoid SSR issues

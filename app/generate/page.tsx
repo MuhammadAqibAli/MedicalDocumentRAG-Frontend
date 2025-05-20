@@ -30,7 +30,6 @@ import { useToast } from "@/hooks/use-toast"
 
 // Import the API service
 import apiService from "@/lib/api"
-
 // Import TipTap editor with dynamic import to avoid SSR issues
 import dynamic from 'next/dynamic';
 
