@@ -132,7 +132,7 @@ export default function HistoryPage() {
     setError(null)
 
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/api/standards/?standard_type_id=${typeId}`)
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api'}/standards/?standard_type_id=${typeId}`)
 
       if (Array.isArray(response.data)) {
         setStandards(response.data)
@@ -188,7 +188,7 @@ export default function HistoryPage() {
     setIsUpdating(true)
 
     try {
-      const response = await axios.put(`http://127.0.0.1:8000/api/standards/${editingStandard.id}/`, {
+      const response = await axios.put(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api'}/standards/${editingStandard.id}/`, {
         standard_title: editedTitle,
         content: editedContent,
         version: editingStandard.version // You might want to increment this
@@ -235,7 +235,7 @@ export default function HistoryPage() {
     setIsDeleting(true)
 
     try {
-      await axios.delete(`http://127.0.0.1:8000/api/standards/${standardToDelete.id}/`)
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api'}/standards/${standardToDelete.id}/`)
 
       // Remove the deleted standard from the list
       setStandards(prevStandards =>
@@ -555,7 +555,7 @@ export default function HistoryPage() {
                   setIsUpdating(true)
 
                   try {
-                    const response = await axios.put(`http://127.0.0.1:8000/api/standards/${mindMapStandard.id}/`, {
+                    const response = await axios.put(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api'}/standards/${mindMapStandard.id}/`, {
                       standard_title: updatedTitle || mindMapStandard.standard_title,
                       content: updatedContent,
                       version: mindMapStandard.version

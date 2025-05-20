@@ -15,3 +15,5 @@ export const APP_CONFIG = {
   appName: 'Medical Assistant',
   version: '1.0.0'
 };
+
+

@@ -56,6 +56,9 @@ jobs:
           const { parse } = require("url");
           const next = require("next");
           
+          // Make sure environment variables are properly set
+          console.log("API URL:", process.env.NEXT_PUBLIC_API_URL || "Not set");
+          
           const dev = process.env.NODE_ENV !== "production";
           const hostname = "0.0.0.0";
           const port = process.env.PORT || 8080;
