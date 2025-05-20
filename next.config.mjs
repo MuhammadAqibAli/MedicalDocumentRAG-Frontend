@@ -1,11 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Add this to generate a consistent build ID
+  generateBuildId: async () => {
+    // You can use a timestamp or any other unique identifier
+    return 'medical-assistant-build-' + Date.now()
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Disable source maps in production to reduce memory usage
+  productionBrowserSourceMaps: false,
   images: {
     unoptimized: true,
   },
@@ -25,6 +32,13 @@ const nextConfig = {
         }
       ];
     }
+    
+    // Add a fallback for the missing module
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      'next/dist/server/route-modules/app-page/vendored/contexts/loadable': false
+    };
+    
     return config;
   },
   // Updated for Next.js 15

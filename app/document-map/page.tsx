@@ -11,9 +11,10 @@ import { useMedicalAssistant } from "@/context/medical-assistant-context"
 import { SavedStandard } from "@/context/medical-assistant-context"
 
 // Import ReactFlow components dynamically to avoid SSR issues
-const DocumentMapViewer = dynamic(() => import("@/components/document-map-viewer"), { 
-  ssr: false 
-})
+const DocumentMapViewer = dynamic(
+  () => import("@/components/document-map-viewer"), 
+  { ssr: false }
+)
 
 export default function DocumentMapPage() {
   const [isLoading, setIsLoading] = useState(true)
