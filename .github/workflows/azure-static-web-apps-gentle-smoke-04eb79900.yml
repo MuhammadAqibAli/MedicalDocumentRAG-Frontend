@@ -15,23 +15,28 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     permissions:
-       id-token: write
-       contents: read
+      id-token: write # Required for OIDC
+      contents: read   # Required for checkout
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
           lfs: false
-      - name: Install OIDC Client from Core Package
-        run: npm install @actions/core@1.6.0 @actions/http-client
-      - name: Get Id Token
-        uses: actions/github-script@v6
-        id: idtoken
-        with:
-           script: |
-               const coredemo = require('@actions/core')
-               return await coredemo.getIDToken()
-           result-encoding: string
+
+      # This step might not be strictly necessary if you're only using the id_token for the Azure SWA action.
+      # The Azure SWA action v1 can handle OIDC token generation if the workflow has id-token: write permissions.
+      # However, if you need it for other steps or prefer explicit control, it's fine.
+      # - name: Install OIDC Client from Core Package
+      #   run: npm install @actions/core@1.10.0 @actions/http-client # Using a more recent version of @actions/core
+      # - name: Get Id Token
+      #   uses: actions/github-script@v7 # Using a more recent version
+      #   id: idtoken
+      #   with:
+      #     script: |
+      #       const core = require('@actions/core')
+      #       return await core.getIDToken()
+      #     result-encoding: string
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -40,10 +45,22 @@ jobs:
           action: "upload"
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "/" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "build" # Built app content directory - optional
-          github_id_token: ${{ steps.idtoken.outputs.result }}
+          app_location: "/"           # App source code path
+          api_location: ""            # Api source code path - optional
+          output_location: "out"      # For Next.js, the typical output is 'out' after `next export` or build artifacts in '.next'
+                                      # If you are using `next export`, set this to "out".
+                                      # If you are using standard Next.js build for SSR/ISR with SWA adapter,
+                                      # the action often handles the output location automatically, but '.next' is the build dir.
+                                      # For a purely static export, 'out' is correct. If your SWA is configured for Next.js hosting,
+                                      # then 'output_location' might not even be needed or can be left as "" and the action figures it out.
+                                      # Given you have prerender errors, you likely want a static export (`next export`).
+          
+          # Custom build commands
+          app_build_command: |
+            npm install --force
+            npm run build # Or your specific Next.js build command e.g., next build && next export
+          
+          # github_id_token: ${{ steps.idtoken.outputs.result }} # This can often be omitted if permissions are set
           ###### End of Repository/Build Configurations ######
 
   close_pull_request_job:
@@ -56,3 +73,5 @@ jobs:
         uses: Azure/static-web-apps-deploy@v1
         with:
           action: "close"
+          # No token needed for close action if deployed via the same workflow initially.
+          # If you want to use a PAT for close, you can, but usually not required.
