@@ -27,18 +27,14 @@ const nextConfig = {
     }
     return config;
   },
-  // Skip type checking during build
-  experimental: {
-    serverComponentsExternalPackages: [
-      '@ckeditor/ckeditor5-build-classic',
-      '@ckeditor/ckeditor5-react',
-      'html2pdf.js',
-      'html2canvas',
-      'jspdf'
-    ]
-  },
-  // Disable static optimization for pages that use CKEditor
-  // This ensures they're always server-rendered during build
+  // Updated for Next.js 15
+  serverExternalPackages: [
+    '@ckeditor/ckeditor5-build-classic',
+    '@ckeditor/ckeditor5-react',
+    'html2pdf.js',
+    'html2canvas',
+    'jspdf'
+  ],
   reactStrictMode: true,
   swcMinify: true,
   poweredByHeader: false

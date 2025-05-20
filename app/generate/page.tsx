@@ -37,7 +37,10 @@ import dynamic from 'next/dynamic';
 // Use dynamic import for TipTap editor to avoid SSR issues
 const TipTapEditor = dynamic(
   () => import('@/components/TipTapEditor'),
-  { ssr: false }
+  { 
+    ssr: false,
+    loading: () => <div className="border rounded-md p-4"><Skeleton className="h-[200px] w-full" /></div>
+  }
 );
 
 interface GenerateFormValues {
