@@ -38,8 +38,7 @@ jobs:
           npm run build
         env:
           CI: true
-          # Add any environment variables needed for build here
-          # NODE_ENV: production
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
       - name: Prepare deployment package
         run: |

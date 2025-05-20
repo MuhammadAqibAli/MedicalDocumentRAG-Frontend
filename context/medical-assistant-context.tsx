@@ -1,8 +1,8 @@
 "use client"
 
 import { createContext, useContext, useState, type ReactNode, useEffect } from "react"
-import axios from "axios"
 import { useToast } from "@/components/ui/use-toast"
+import apiService from "@/lib/api"
 
 // Types
 export type DocumentType = "policy" | "procedure" | "guideline" | "form" | "other"
@@ -175,337 +175,27 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
-  // Mock API for demonstration purposes
-  // In a real application, these would call the actual API endpoints
-  const api = {
-    baseUrl: "http://127.0.0.1:8000/api",
-
-    async uploadDocument(file: File, documentType: DocumentType): Promise<Document> {
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("standard_type_id", documentType)
-
-      try {
-        const response = await axios.post(`${api.baseUrl}/upload/`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          timeout: 120000, // Increased to 120 seconds (2 minutes) timeout
-        })
-        return response.data
-      } catch (error) {
-        console.error("Error uploading document:", error)
-        if (axios.isAxiosError(error)) {
-          if (error.code === 'ECONNABORTED') {
-            throw new Error("Upload request timed out. Please try again.")
-          }
-          if (error.response) {
-            // The request was made and the server responded with a status code
-            // that falls out of the range of 2xx
-            if (error.response.status === 413) {
-              throw new Error("File too large. Maximum file size is 10MB.")
-            } else if (error.response.status === 415) {
-              throw new Error("Unsupported file format. Please upload PDF or DOCX files only.")
-            } else if (error.response.status >= 400 && error.response.status < 500) {
-              throw new Error(`Client error: ${error.response.data.message || error.message}`)
-            } else if (error.response.status >= 500) {
-              throw new Error("Server error. Please try again later.")
-            }
-          } else if (error.request) {
-            // The request was made but no response was received
-            throw new Error("No response from server. Please check your connection and try again.")
-          }
-        }
-        throw new Error("Failed to upload document. Please try again.")
-      }
-    },
-
-    async generateContent(topic: string, contentType: ContentType, modelName: string): Promise<GeneratedContent> {
-      try {
-        const response = await axios.post(`${api.baseUrl}/generate/`, {
-          topic,
-          content_type: contentType,
-          model_name: modelName,
-        }, {
-          timeout: 180000, 
-        })
-        return response.data
-      } catch (error) {
-        console.error("Error generating content:", error)
-        if (axios.isAxiosError(error)) {
-          if (error.code === 'ECONNABORTED') {
-            throw new Error("Generation request timed out. Please try again with a simpler topic.")
-          }
-          if (error.response) {
-            if (error.response.status >= 400 && error.response.status < 500) {
-              throw new Error(`Client error: ${error.response.data.message || error.message}`)
-            } else if (error.response.status >= 500) {
-              throw new Error("Server error. Please try again later.")
-            }
-          } else if (error.request) {
-            throw new Error("No response from server. Please check your connection and try again.")
-          }
-        }
-        throw new Error("Failed to generate content. Please try again.")
-      }
-    },
-
-    async fetchAvailableModels(): Promise<Model[]> {
-      try {
-        const response = await axios.get<ModelsApiResponse>(`${api.baseUrl}/models/`, {
-          timeout: 10000, // 10 seconds timeout
-        });
-        
-        console.log("API response for models:", response.data);
-        
-        // Handle different response formats
-        if (Array.isArray(response.data)) {
-          // If response.data is an array of strings or Model objects
-          return response.data.map(model => 
-            typeof model === 'string' ? { name: model } : model
-          );
-        } else if (response.data && typeof response.data === 'object') {
-          // If response.data is an object with a models property
-          if (response.data.models && Array.isArray(response.data.models)) {
-            return response.data.models.map(model => 
-              typeof model === 'string' ? { name: model } : model
-            );
-          }
-        }
-        
-        // Fallback to hardcoded models if response format is unexpected
-        return [
-          { name: "llama3-8b-instruct" },
-          { name: "mistral-7b-instruct" },
-          { name: "phi-3-mini-instruct" },
-          { name: "tinyllama-1.1b-chat" }
-        ];
-      } catch (error) {
-        console.error("Error fetching available models:", error);
-        // Return fallback models instead of throwing
-        return [
-          { name: "llama3-8b-instruct" },
-          { name: "mistral-7b-instruct" },
-          { name: "phi-3-mini-instruct" },
-          { name: "tinyllama-1.1b-chat" }
-        ];
-      }
-    },
-
-    async fetchGeneratedContents(page = 1, filters: Record<string, any> = {}): Promise<GeneratedContent[]> {
-      try {
-        const params = new URLSearchParams({ page: page.toString(), ...filters })
-        const response = await axios.get(`${api.baseUrl}/generated-content/?${params}`, {
-          timeout: 30000, // 30 seconds timeout
-        })
-        return response.data.results
-      } catch (error) {
-        console.error("Error fetching generated contents:", error)
-        if (axios.isAxiosError(error)) {
-          console.log("API Error Details:", {
-            code: error.code,
-            message: error.message,
-            config: error.config,
-            status: error.response?.status
-          })
-
-          if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-            console.warn("API request timed out - using mock data")
-            // Don't throw error for timeouts, just use mock data
-            return getMockGeneratedContents().filter(content => {
-              // Apply filters to mock data
-              if (filters.content_type && content.content_type !== filters.content_type) {
-                return false
-              }
-              if (filters.search && !content.topic.toLowerCase().includes(filters.search.toLowerCase())) {
-                return false
-              }
-              return true
-            })
-          }
-
-          if (error.response) {
-            if (error.response.status >= 500) {
-              console.warn("Server error - using mock data")
-              return getMockGeneratedContents().filter(content => {
-                // Apply filters to mock data
-                if (filters.content_type && content.content_type !== filters.content_type) {
-                  return false
-                }
-                if (filters.search && !content.topic.toLowerCase().includes(filters.search.toLowerCase())) {
-                  return false
-                }
-                return true
-              })
-            }
-          } else if (error.request) {
-            console.warn("No response from server - using mock data")
-            return getMockGeneratedContents().filter(content => {
-              // Apply filters to mock data
-              if (filters.content_type && content.content_type !== filters.content_type) {
-                return false
-              }
-              if (filters.search && !content.topic.toLowerCase().includes(filters.search.toLowerCase())) {
-                return false
-              }
-              return true
-            })
-          }
-        }
-
-        // Return filtered mock data if API fails
-        return getMockGeneratedContents().filter(content => {
-          // Apply filters to mock data
-          if (filters.content_type && content.content_type !== filters.content_type) {
-            return false
-          }
-          if (filters.search && !content.topic.toLowerCase().includes(filters.search.toLowerCase())) {
-            return false
-          }
-          return true
-        })
-      }
-    },
-
-    async fetchGeneratedContentById(id: string): Promise<GeneratedContent> {
-      try {
-        const response = await axios.get(`${api.baseUrl}/generated-content/${id}/`, {
-          timeout: 10000, // 10 seconds timeout
-        })
-        return response.data
-      } catch (error) {
-        console.error(`Error fetching generated content with ID ${id}:`, error)
-        if (axios.isAxiosError(error)) {
-          if (error.code === 'ECONNABORTED') {
-            throw new Error("Request timed out. Please try again.")
-          }
-          if (error.response) {
-            if (error.response.status === 404) {
-              throw new Error("Content not found. It may have been deleted.")
-            } else if (error.response.status >= 500) {
-              throw new Error("Server error. Please try again later.")
-            }
-          } else if (error.request) {
-            throw new Error("No response from server. Please check your connection and try again.")
-          }
-        }
-
-        // Return mock data for ID 1 if API fails
-        if (id === "1") {
-          return {
-            id: "1",
-            topic: "Diabetes Management Protocol",
-            content_type: "procedure",
-            contentType: "procedure",
-            llm_model_used: "gpt-4-medical",
-            modelName: "gpt-4-medical",
-            generated_text: "This is a sample diabetes management protocol...",
-            content: "This is a sample diabetes management protocol...",
-            created_at: "2023-05-15T10:30:00Z",
-            createdAt: "2023-05-15T10:30:00Z",
-            validation_results: { valid: true },
-            validationResults: { valid: true },
-            source_chunk_ids: [
-              {
-                text: "Diabetes management should include regular monitoring of HbA1c levels every 3-6 months.",
-                source: "NZ Diabetes Guidelines 2023.pdf",
-              },
-              {
-                text: "Metformin is recommended as the first-line pharmacological therapy for type 2 diabetes.",
-                source: "Clinical Pharmacy Handbook.pdf",
-              },
-            ],
-            sourceChunks: [
-              {
-                text: "Diabetes management should include regular monitoring of HbA1c levels every 3-6 months.",
-                source: "NZ Diabetes Guidelines 2023.pdf",
-              },
-              {
-                text: "Metformin is recommended as the first-line pharmacological therapy for type 2 diabetes.",
-                source: "Clinical Pharmacy Handbook.pdf",
-              },
-            ],
-          }
-        }
-
-        throw new Error("Failed to fetch content details. Please try again.")
-      }
-    },
-
-    async fetchStandardTypes(): Promise<StandardType[]> {
-      try {
-        const response = await axios.get<{ results: StandardType[] }>(`${api.baseUrl}/standard-types/`, {
-          timeout: 10000, // 10 seconds timeout
-        });
-        
-        console.log("API response for standard types:", response.data);
-        
-        // Check if response has results array
-        if (response.data && response.data.results && Array.isArray(response.data.results) && response.data.results.length > 0) {
-          return response.data.results;
-        }
-        
-        // If response is not valid, return fallback types
-        return [
-          { id: "eb3c02c3-f39a-4547-92c5-5c78e39aa82f", name: "Best Practice" },
-          { id: "5ef182ec-5541-44f0-b2eb-46460184ac54", name: "Policy" },
-          { id: "457e7f33-a192-4f8e-9fa1-0553392ddc2c", name: "Procedure" },
-          { id: "91a641b1-2092-4d5c-8c3e-a4f9f4518d6a", name: "Standing Order" }
-        ];
-      } catch (error) {
-        console.error("Error fetching standard types:", error);
-        // Return fallback types instead of throwing
-        return [
-          { id: "eb3c02c3-f39a-4547-92c5-5c78e39aa82f", name: "Best Practice" },
-          { id: "5ef182ec-5541-44f0-b2eb-46460184ac54", name: "Policy" },
-          { id: "457e7f33-a192-4f8e-9fa1-0553392ddc2c", name: "Procedure" },
-          { id: "91a641b1-2092-4d5c-8c3e-a4f9f4518d6a", name: "Standing Order" }
-        ];
-      }
-    },
-
-    async saveStandard(standardData: StandardData): Promise<SavedStandard> {
-      try {
-        const response = await axios.post<SavedStandard>(`${api.baseUrl}/standards/`, standardData, {
-          timeout: 30000, // 30 seconds timeout
-        });
-        
-        return response.data;
-      } catch (error) {
-        console.error("Error saving standard:", error);
-        if (axios.isAxiosError(error)) {
-          if (error.code === 'ECONNABORTED') {
-            throw new Error("Request timed out. Please try again.");
-          }
-          if (error.response) {
-            if (error.response.status === 400) {
-              throw new Error(`Validation error: ${JSON.stringify(error.response.data)}`);
-            } else if (error.response.status >= 500) {
-              throw new Error("Server error. Please try again later.");
-            }
-          } else if (error.request) {
-            throw new Error("No response from server. Please check your connection and try again.");
-          }
-        }
-        throw new Error("Failed to save standard. Please try again.");
-      }
-    },
-  }
-
   const uploadDocument = async (file: File, documentType: DocumentType): Promise<Document> => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const newDocument = await api.uploadDocument(file, documentType)
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("standard_type_id", documentType)
+
+      const response = await apiService.uploadDocument(formData)
+      const newDocument = response.data
+
       setDocuments((prev) => [...prev, newDocument])
       toast({
-        title: "Document uploaded successfully",
-        description: `${file.name} has been uploaded.`,
+        title: "Document uploaded",
+        description: `${file.name} has been uploaded successfully.`,
       })
+
       return newDocument
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
+    } catch (err: any) {
+      const errorMessage = err.message || "An unknown error occurred"
       setError(errorMessage)
       toast({
         title: "Upload failed",
@@ -527,15 +217,23 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
     setError(null)
 
     try {
-      const newContent = await api.generateContent(topic, contentType, modelName)
+      const response = await apiService.generateContent({
+        topic,
+        content_type: contentType,
+        model_name: modelName
+      })
+      
+      const newContent = response.data
       setGeneratedContents((prev) => [...prev, newContent])
+      
       toast({
         title: "Content generated successfully",
         description: `${contentType} on "${topic}" has been generated.`,
       })
+      
       return newContent
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
+    } catch (err: any) {
+      const errorMessage = err.message || "An unknown error occurred"
       setError(errorMessage)
       toast({
         title: "Generation failed",
@@ -553,18 +251,40 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
     setError(null)
 
     try {
-      const models = await api.fetchAvailableModels()
+      const response = await apiService.fetchModels()
+      console.log("API response for models:", response.data)
+      
+      // Handle different response formats
+      let models: Model[] = []
+      
+      if (Array.isArray(response.data)) {
+        models = response.data.map(model => 
+          typeof model === 'string' ? { name: model } : model
+        )
+      } else if (response.data && typeof response.data === 'object') {
+        if (response.data.models && Array.isArray(response.data.models)) {
+          models = response.data.models.map((model: string | Model) => 
+            typeof model === 'string' ? { name: model } : model
+          )
+        }
+      }
+      
       setAvailableModels(models)
       return models
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
+    } catch (err: any) {
+      const errorMessage = err.message || "An unknown error occurred"
       setError(errorMessage)
-      toast({
-        title: "Failed to fetch models",
-        description: errorMessage,
-        variant: "destructive",
-      })
-      throw err
+      
+      // Fallback to hardcoded models if API fails
+      const fallbackModels = [
+        { name: "llama3-8b-instruct" },
+        { name: "mistral-7b-instruct" },
+        { name: "phi-3-mini-instruct" },
+        { name: "tinyllama-1.1b-chat" }
+      ]
+      
+      setAvailableModels(fallbackModels)
+      return fallbackModels
     } finally {
       setIsLoading(false)
     }
@@ -575,7 +295,8 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
     setError(null)
 
     try {
-      const contents = await api.fetchGeneratedContents(page, filters)
+      const response = await apiService.fetchGeneratedContents(page, filters)
+      const contents = response.data
 
       // Only update state if we have valid data
       if (Array.isArray(contents) && contents.length > 0) {
@@ -597,8 +318,8 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
       }
 
       return contents
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
+    } catch (err: any) {
+      const errorMessage = err.message || "An unknown error occurred"
       setError(errorMessage)
       toast({
         title: "Failed to fetch content history",
@@ -618,7 +339,8 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
     setError(null)
 
     try {
-      const content = await api.fetchGeneratedContentById(id)
+      const response = await apiService.fetchGeneratedContentById(id)
+      const content = response.data
 
       // Map API response to frontend format
       const frontendContent = {
@@ -632,8 +354,8 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
       }
 
       return frontendContent
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
+    } catch (err: any) {
+      const errorMessage = err.message || "An unknown error occurred"
       setError(errorMessage)
       toast({
         title: "Failed to fetch content details",
@@ -653,51 +375,57 @@ export function MedicalAssistantProvider({ children }: { children: ReactNode }) 
   }
 
   const fetchStandardTypes = async (): Promise<StandardType[]> => {
-    setIsLoading(true);
-    setError(null);
+    setIsLoading(true)
+    setError(null)
 
     try {
-      const types = await api.fetchStandardTypes();
-      setStandardTypes(types);
-      return types;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
-      setError(errorMessage);
-      toast({
-        title: "Failed to fetch document types",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      throw err;
+      const response = await apiService.fetchStandardTypes()
+      console.log("API response for standard types:", response.data)
+      
+      // Check if response has results array
+      if (response.data && response.data.results && Array.isArray(response.data.results) && response.data.results.length > 0) {
+        setStandardTypes(response.data.results)
+        return response.data.results
+      }
+      
+      // Fallback to empty array if no results
+      setStandardTypes([])
+      return []
+    } catch (err: any) {
+      const errorMessage = err.message || "An unknown error occurred"
+      setError(errorMessage)
+      setStandardTypes([])
+      return []
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const saveStandard = async (standardData: StandardData): Promise<SavedStandard> => {
-    setIsLoading(true);
-    setError(null);
+    setIsLoading(true)
+    setError(null)
 
     try {
-      const savedStandard = await api.saveStandard(standardData);
+      const response = await apiService.saveStandard(standardData)
+      const savedStandard = response.data
       toast({
         title: "Standard saved successfully",
         description: `"${savedStandard.standard_title}" has been saved.`,
-      });
-      return savedStandard;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
-      setError(errorMessage);
+      })
+      return savedStandard
+    } catch (err: any) {
+      const errorMessage = err.message || "An unknown error occurred"
+      setError(errorMessage)
       toast({
         title: "Failed to save standard",
         description: errorMessage,
         variant: "destructive",
-      });
-      throw err;
+      })
+      throw err
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   // Load standard types on context initialization
   useEffect(() => {

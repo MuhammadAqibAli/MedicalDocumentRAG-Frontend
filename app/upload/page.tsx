@@ -24,7 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel
 } from "@/components/ui/dropdown-menu"
-import axios from "axios"
+import apiClient from "@/lib/api"
 
 interface UploadFormValues {
   documentType: DocumentType
@@ -81,7 +81,7 @@ export default function UploadPage() {
   const fetchDocuments = async () => {
     setIsDocumentsLoading(true)
     try {
-      const response = await axios.get('http://127.0.0.1:8000/api/documents/')
+      const response = await apiClient.fetchDocuments()
       setUploadedDocuments(response.data)
     } catch (error) {
       console.error('Failed to fetch documents:', error)
@@ -97,7 +97,7 @@ export default function UploadPage() {
 
   const viewDocument = async (document: UploadedDocument) => {
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/api/documents/${document.id}/`)
+      const response = await apiClient.fetchGeneratedContentById(document.id)
       setSelectedDocument(response.data)
       setIsViewDialogOpen(true)
     } catch (error) {
@@ -112,9 +112,7 @@ export default function UploadPage() {
 
   const downloadDocument = async (document: UploadedDocument) => {
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/api/documents/${document.id}/download/`, {
-        responseType: 'blob'
-      })
+      const response = await apiClient.downloadDocument(document.id)
       
       // Create a blob URL and trigger download
       const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -132,7 +130,6 @@ export default function UploadPage() {
         title: "Download Started",
         description: "Download started successfully.",
         className: "bg-green-50 border-green-200",
-
       })
     } catch (error) {
       console.error('Failed to download document:', error)
@@ -149,7 +146,7 @@ export default function UploadPage() {
     if (confirm(`Are you sure you want to delete "${document.file_name}"?`)) {
       setIsDeleting(true)
       try {
-        await axios.delete(`http://127.0.0.1:8000/api/documents/${document.id}/`)
+        await apiClient.deleteDocument(document.id)
         
         // Remove document from state
         setUploadedDocuments(prev => prev.filter(doc => doc.id !== document.id))

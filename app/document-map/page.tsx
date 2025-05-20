@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import axios from "axios"
+import apiService from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
@@ -29,7 +29,7 @@ export default function DocumentMapPage() {
       setError(null)
 
       try {
-        const response = await axios.get('http://127.0.0.1:8000/api/standards/')
+        const response = await apiService.fetchStandards()
         
         if (Array.isArray(response.data)) {
           setStandards(response.data)

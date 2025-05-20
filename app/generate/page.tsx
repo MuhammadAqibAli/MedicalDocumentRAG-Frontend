@@ -24,10 +24,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import axios from "axios"
 import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
 import { useToast } from "@/hooks/use-toast"
+
+// Import the API service
+import apiService from "@/lib/api"
 
 // Import TipTap editor with dynamic import to avoid SSR issues
 import dynamic from 'next/dynamic';
@@ -108,7 +110,7 @@ export default function GeneratePage() {
     setStandardsError(null);
 
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/api/standards/?standard_type_id=${selectedType}`);
+      const response = await apiService.fetchStandards(selectedType);
 
       if (Array.isArray(response.data)) {
         setStandards(response.data);
@@ -407,7 +409,7 @@ export default function GeneratePage() {
     try {
       const selectedType = form.getValues().contentType;
 
-      const response = await axios.post('http://127.0.0.1:8000/api/standards/compare/', {
+      const response = await apiService.compareStandards({
         content1: editorContent,
         content2: historyContent,
         standard_type_id: selectedType
