@@ -5,8 +5,7 @@ import apiService from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
-"use client"
-import dynamic from "next/dynamic"
+import dynamic from "next/dynamic";
 import { useMedicalAssistant } from "@/context/medical-assistant-context"
 import { SavedStandard } from "@/context/medical-assistant-context"
 
