@@ -36,9 +36,10 @@ const TipTapEditor = dynamic(
 );
 
 // Import ReactFlow components dynamically to avoid SSR issues
-const MindMapEditor = dynamic(() => import("@/components/mind-map-editor"), {
-  ssr: false
-})
+const MindMapEditor = dynamic(
+  () => import("@/components/mind-map-editor"), 
+  { ssr: false }
+)
 
 // Import DocumentMapViewer
 const DocumentMapViewer = dynamic(() => import("@/components/document-map-viewer"), {
