@@ -35,6 +35,7 @@ interface NodeData {
   isCategory?: boolean
   standard?: SavedStandard
   onClick?: () => void
+  showControls?: boolean // New prop to control button visibility
 }
 
 export default function EditableNode({ data, id, isConnectable }: NodeProps) {
@@ -131,22 +132,25 @@ export default function EditableNode({ data, id, isConnectable }: NodeProps) {
         <div>
           <div className="flex items-center justify-between mb-1">
             <div className="font-medium text-sm">{label}</div>
-            <div className="flex items-center gap-1">
-              <Edit 
-                className="h-4 w-4 cursor-pointer hover:opacity-80" 
-                onClick={() => setIsEditing(true)}
-              />
-              {!isRoot && (
-                <Trash2 
+            {/* Only show controls if showControls is true */}
+            {data.showControls !== false && (
+              <div className="flex items-center gap-1">
+                <Edit 
                   className="h-4 w-4 cursor-pointer hover:opacity-80" 
-                  onClick={() => data.onDelete && data.onDelete(id)}
+                  onClick={() => setIsEditing(true)}
                 />
-              )}
-              <Plus 
-                className="h-4 w-4 cursor-pointer hover:opacity-80" 
-                onClick={() => data.onAddChild && data.onAddChild(id)}
-              />
-            </div>
+                {!isRoot && (
+                  <Trash2 
+                    className="h-4 w-4 cursor-pointer hover:opacity-80" 
+                    onClick={() => data.onDelete && data.onDelete(id)}
+                  />
+                )}
+                <Plus 
+                  className="h-4 w-4 cursor-pointer hover:opacity-80" 
+                  onClick={() => data.onAddChild && data.onAddChild(id)}
+                />
+              </div>
+            )}
           </div>
           {content && (
             <div 

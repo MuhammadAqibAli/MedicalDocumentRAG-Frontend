@@ -26,12 +26,14 @@ interface DocumentMapViewerProps {
   standards: SavedStandard[]
   standardTypes: StandardType[]
   onStandardClick?: (standard: SavedStandard) => void
+  showNodeControls?: boolean // New prop
 }
 
 export default function DocumentMapViewer({ 
   standards, 
   standardTypes,
-  onStandardClick 
+  onStandardClick,
+  showNodeControls = true // Default to true for backward compatibility
 }: DocumentMapViewerProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
@@ -44,17 +46,17 @@ export default function DocumentMapViewer({
     const newNodes: Node[] = []
     const newEdges: Edge[] = []
     
-    // Define node colors
+    // Define node colors with lighter variants for child nodes
     const rootColor = { bg: '#3949ab', border: '#283593', text: '#ffffff' }
     const categoryColors = [
-      { bg: '#795548', border: '#5d4037', text: '#ffffff' }, // Brown
-      { bg: '#2196f3', border: '#1976d2', text: '#ffffff' }, // Blue
-      { bg: '#ff9800', border: '#f57c00', text: '#000000' }, // Orange
-      { bg: '#4caf50', border: '#388e3c', text: '#ffffff' }, // Green
-      { bg: '#9c27b0', border: '#7b1fa2', text: '#ffffff' }, // Purple
-      { bg: '#00bcd4', border: '#0097a7', text: '#ffffff' }, // Cyan
-      { bg: '#f44336', border: '#d32f2f', text: '#ffffff' }, // Red
-      { bg: '#ffc107', border: '#ffa000', text: '#000000' }  // Yellow
+      { bg: '#795548', border: '#5d4037', text: '#ffffff', childBg: '#8d6e63' }, // Brown
+      { bg: '#2196f3', border: '#1976d2', text: '#ffffff', childBg: '#64b5f6' }, // Blue
+      { bg: '#ff9800', border: '#f57c00', text: '#000000', childBg: '#ffb74d' }, // Orange
+      { bg: '#4caf50', border: '#388e3c', text: '#ffffff', childBg: '#81c784' }, // Green
+      { bg: '#9c27b0', border: '#7b1fa2', text: '#ffffff', childBg: '#ba68c8' }, // Purple
+      { bg: '#00bcd4', border: '#0097a7', text: '#ffffff', childBg: '#4dd0e1' }, // Cyan
+      { bg: '#f44336', border: '#d32f2f', text: '#ffffff', childBg: '#e57373' }, // Red
+      { bg: '#ffc107', border: '#ffa000', text: '#000000', childBg: '#ffd54f' }  // Yellow
     ]
     
     // Create root node
@@ -65,7 +67,8 @@ export default function DocumentMapViewer({
       data: { 
         label: "Document Map",
         color: rootColor,
-        isRoot: true
+        isRoot: true,
+        showControls: showNodeControls
       },
       position: { x: 400, y: 0 }
     })
@@ -86,6 +89,9 @@ export default function DocumentMapViewer({
       const nodeId = `type-${index}`
       const categoryColor = categoryColors[index % categoryColors.length]
       
+      // Find the standardType object for this type name
+      const standardType = standardTypes.find(type => type.name === typeName)
+      
       // Calculate positions in a radial layout
       const angle = (2 * Math.PI * index) / typeNames.length
       const radius = 250
@@ -98,21 +104,44 @@ export default function DocumentMapViewer({
         data: { 
           label: typeName,
           color: categoryColor,
-          isCategory: true
+          isCategory: true,
+          standardType: standardType, // Store the standardType object
+          onClick: () => {
+            // When clicking a category node, activate the corresponding tab
+            if (onStandardClick && standardType) {
+              // Create a dummy standard with just the type info for the handler
+              const dummyStandard: SavedStandard = {
+                id: '',
+                standard_title: '',
+                content: '',
+                standard_type: standardType.id,
+                standard_type_name: standardType.name,
+                created_at: '',
+                updated_at: '',
+                version: '0',
+                generated_content: null,
+                llm_model_used: null,
+                is_ai_generated: false
+              }
+              onStandardClick(dummyStandard)
+            }
+          },
+          showControls: showNodeControls
         },
         position: { x: xPos, y: yPos }
       })
       
+      // Connect root to category
       newEdges.push({
         id: `edge-${rootId}-${nodeId}`,
         source: rootId,
         target: nodeId,
         type: 'smoothstep',
-        style: { stroke: categoryColor.border, strokeWidth: 2 },
+        style: { stroke: rootColor.border, strokeWidth: 2 },
         animated: true,
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: categoryColor.border
+          color: rootColor.border
         }
       })
       
@@ -127,18 +156,27 @@ export default function DocumentMapViewer({
         const stdXPos = xPos + stdRadius * Math.cos(stdAngle)
         const stdYPos = yPos + stdRadius * Math.sin(stdAngle)
         
+        // Use lighter color variant for child nodes
+        const childColor = {
+          bg: categoryColor.childBg || categoryColor.bg,
+          border: categoryColor.border,
+          text: categoryColor.text
+        }
+        
         newNodes.push({
           id: standardNodeId,
           type: 'editableNode',
           data: { 
             label: standard.standard_title,
-            color: categoryColor,
+            color: childColor,
             standard: standard,
-            onClick: () => onStandardClick && onStandardClick(standard)
+            onClick: () => onStandardClick && onStandardClick(standard),
+            showControls: showNodeControls
           },
           position: { x: stdXPos, y: stdYPos }
         })
         
+        // Connect category to standard
         newEdges.push({
           id: `edge-${nodeId}-${standardNodeId}`,
           source: nodeId,
@@ -156,7 +194,7 @@ export default function DocumentMapViewer({
     
     setNodes(newNodes)
     setEdges(newEdges)
-  }, [standards, standardTypes, setNodes, setEdges, onStandardClick])
+  }, [standards, standardTypes, setNodes, setEdges, onStandardClick, showNodeControls])
 
   // Reset to original layout
   const resetLayout = useCallback(() => {

@@ -92,6 +92,7 @@ export default function DocumentMapPage() {
           onStandardClick={(standard) => {
             router.push(`/history?standard=${standard.id}`)
           }}
+          showNodeControls={false} // Hide node controls in document map view
         />
       </div>
     </div>

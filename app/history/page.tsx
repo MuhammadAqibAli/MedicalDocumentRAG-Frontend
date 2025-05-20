@@ -40,6 +40,11 @@ const MindMapEditor = dynamic(() => import("@/components/mind-map-editor"), {
   ssr: false
 })
 
+// Import DocumentMapViewer
+const DocumentMapViewer = dynamic(() => import("@/components/document-map-viewer"), {
+  ssr: false
+})
+
 export default function HistoryPage() {
   const router = useRouter()
   const { standardTypes, fetchStandardTypes, isLoading: contextLoading, error: contextError } = useMedicalAssistant()
@@ -62,6 +67,37 @@ export default function HistoryPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [mindMapDialogOpen, setMindMapDialogOpen] = useState(false)
   const [mindMapStandard, setMindMapStandard] = useState<SavedStandard | null>(null)
+  const [documentMapDialogOpen, setDocumentMapDialogOpen] = useState(false)
+
+  // Function to handle standard click in document map
+  const handleDocumentMapStandardClick = (standard: SavedStandard) => {
+    // If the standard has an empty ID, it's a category click
+    if (!standard.id) {
+      // Just activate the tab for this standard type
+      setActiveTab(standard.standard_type)
+      setSelectedStandard(null) // Clear any selected standard
+      
+      // Close the dialog after selection
+      setDocumentMapDialogOpen(false)
+      return
+    }
+    
+    // Otherwise it's a standard click
+    // Find the tab for this standard's type
+    const standardType = standardTypes.find(type => type.id === standard.standard_type)
+    if (standardType) {
+      // Set active tab to this standard's type
+      setActiveTab(standardType.id)
+      
+      // After tab change and standards load, select this specific standard
+      setTimeout(() => {
+        setSelectedStandard(standard)
+        
+        // Close the dialog after selection
+        setDocumentMapDialogOpen(false)
+      }, 100)
+    }
+  }
 
   // Initialize tabs based on standard types
   useEffect(() => {
@@ -259,8 +295,17 @@ export default function HistoryPage() {
   )
 
   return (
-    <div className="w-full px-4">
-      <h1 className="text-3xl font-bold mb-6">Standards Library</h1>
+    <div className="container mx-auto py-6 space-y-8">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Document History</h1>
+        <Button 
+          onClick={() => setDocumentMapDialogOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <BrainCircuit className="h-4 w-4" />
+          Document Map
+        </Button>
+      </div>
 
       {(error || contextError) && (
         <Alert variant="destructive" className="mb-6">
@@ -546,6 +591,23 @@ export default function HistoryPage() {
               />
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Map Dialog */}
+      <Dialog open={documentMapDialogOpen} onOpenChange={setDocumentMapDialogOpen}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] w-[90vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="px-4 pt-4 pb-4 flex-shrink-0">
+            <DialogTitle>Document Map</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            <DocumentMapViewer
+              standards={standards}
+              standardTypes={standardTypes}
+              onStandardClick={handleDocumentMapStandardClick}
+              showNodeControls={false} // Hide node controls in document map view
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </div>
