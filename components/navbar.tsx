@@ -1,10 +1,24 @@
 "use client"
 
+import React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { FileUp, History, Menu, Sparkles, FolderTree } from "lucide-react"
+import { 
+  Home, 
+  FileText, 
+  Sparkles, 
+  History, 
+  Settings, 
+  Menu, 
+  X, 
+  Moon, 
+  Sun, 
+  ClipboardCheck, 
+  FileUp,
+  FolderTree
+} from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useState } from "react"
 
@@ -12,7 +26,8 @@ const navigationItems = [
   { name: "Upload", href: "/upload", icon: FileUp },
   { name: "Generate", href: "/generate", icon: Sparkles },
   { name: "History", href: "/history", icon: History },
-  { name: "Document Map", href: "/document-map", icon: FolderTree }
+  { name: "Document Map", href: "/document-map", icon: FolderTree },
+  { name: "Audit Questions", href: "/audit-questions", icon: <ClipboardCheck className="h-5 w-5" /> },
 ]
 
 export default function Navbar() {
@@ -37,7 +52,12 @@ export default function Navbar() {
           {navigationItems.map((item) => (
             <Button key={item.href} variant={pathname === item.href ? "default" : "ghost"} asChild>
               <Link href={item.href} className="flex items-center">
-                <item.icon className="h-5 w-5 mr-2" />
+                {React.isValidElement(item.icon) ? (
+                  item.icon
+                ) : (
+                  // @ts-ignore - Lucide icons are valid React components
+                  <item.icon className="h-5 w-5 mr-2" />
+                )}
                 {item.name}
               </Link>
             </Button>
@@ -63,7 +83,12 @@ export default function Navbar() {
                   onClick={() => setOpen(false)}
                 >
                   <Link href={item.href} className="flex items-center">
-                    <item.icon className="h-5 w-5 mr-2" />
+                    {React.isValidElement(item.icon) ? (
+                      item.icon
+                    ) : (
+                      // @ts-ignore - Lucide icons are valid React components
+                      <item.icon className="h-5 w-5 mr-2" />
+                    )}
                     {item.name}
                   </Link>
                 </Button>

@@ -92,8 +92,26 @@ const apiService = {
   
   compareStandards: (data: { content1: string, content2: string, standard_type_id: string }) => 
     apiClient.post('/standards/compare/', data),
+    
+  // Audit Questions endpoints
+  fetchAuditQuestions: (policyName?: string) => 
+    apiClient.get('/audit-questions/', {
+      params: policyName ? { policy_name: policyName } : {}
+    }),
+    
+  generateAuditQuestions: (data: { ai_model: string, policy_name: string, number_of_questions: number }) => 
+    apiClient.post('/audit-questions/generate/', data, {
+      timeout: API_CONFIG.timeout.generate
+    }),
+    
+  updateAuditQuestion: (questionId: string, data: { question_text?: string, policy_name?: string, options?: string[] }) => 
+    apiClient.put(`/audit-questions/${questionId}/`, data),
+    
+  deleteAuditQuestion: (questionId: string) => 
+    apiClient.delete(`/audit-questions/${questionId}/delete/`),
 };
 
 export default apiService;
+
 
 

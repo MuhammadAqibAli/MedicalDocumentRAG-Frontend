@@ -2,8 +2,8 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileUp, Sparkles, History } from "lucide-react"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { FileUp, Sparkles, History, ClipboardCheck } from "lucide-react"
 
 export default function Home() {
   return (
@@ -84,6 +84,30 @@ export default function Home() {
               <Link href="/history">View History</Link>
             </Button>
           </CardContent>
+        </Card>
+
+        <Card className="flex flex-col h-full">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="h-6 w-6 text-primary" />
+              <CardTitle>Audit Questions</CardTitle>
+            </div>
+            <CardDescription>
+              Generate and manage audit questions for policy compliance
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-grow">
+            <p className="text-sm text-gray-600 mb-4">
+              Create audit questions using AI to assess compliance with your policies and procedures.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Link href="/audit-questions" className="w-full">
+              <Button className="w-full">
+                Manage Audit Questions
+              </Button>
+            </Link>
+          </CardFooter>
         </Card>
       </div>
 
