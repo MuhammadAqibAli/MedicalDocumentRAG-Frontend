@@ -109,6 +109,24 @@ export default function Home() {
             </Link>
           </CardFooter>
         </Card>
+
+        <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-medium text-blue-600">
+              <ClipboardCheck className="h-5 w-5 text-blue-600" />
+              Patient Management
+            </CardTitle>
+            <CardDescription>Manage patient complaints and feedback</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-gray-600">
+              Track and respond to patient complaints, feedback, and manage patient records.
+            </p>
+            <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
+              <Link href="/patient-management">Patient Management</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="max-w-3xl mx-auto mt-16 bg-gray-50 p-6 rounded-lg border border-gray-200">

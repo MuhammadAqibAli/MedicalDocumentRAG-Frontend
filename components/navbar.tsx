@@ -17,7 +17,8 @@ import {
   Sun, 
   ClipboardCheck, 
   FileUp,
-  FolderTree
+  FolderTree,
+  Users
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useState } from "react"
@@ -28,6 +29,7 @@ const navigationItems = [
   { name: "History", href: "/history", icon: History },
   { name: "Document Map", href: "/document-map", icon: FolderTree },
   { name: "Audit Questions", href: "/audit-questions", icon: <ClipboardCheck className="h-5 w-5" /> },
+  { name: "Management", href: "/patient-management", icon: Users },
 ]
 
 export default function Navbar() {

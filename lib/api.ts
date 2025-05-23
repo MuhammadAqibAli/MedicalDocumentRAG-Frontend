@@ -46,69 +46,96 @@ apiClient.interceptors.response.use(
 // API service methods
 const apiService = {
   // Document endpoints
-  uploadDocument: (formData: FormData) => 
+  uploadDocument: (formData: FormData) =>
     apiClient.post('/documents/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: API_CONFIG.timeout.upload
     }),
-  
-  fetchDocuments: () => 
+
+  fetchDocuments: () =>
     apiClient.get('/documents/'),
-  
-  downloadDocument: (id: string) => 
+
+  downloadDocument: (id: string) =>
     apiClient.get(`/documents/${id}/download/`, {
       responseType: 'blob'
     }),
-  
-  deleteDocument: (id: string) => 
+
+  deleteDocument: (id: string) =>
     apiClient.delete(`/documents/${id}/`),
-  
+
   // Content generation endpoints
-  generateContent: (data: { topic: string, content_type: string, model_name: string }) => 
+  generateContent: (data: { topic: string, content_type: string, model_name: string }) =>
     apiClient.post('/generate/', data, {
       timeout: API_CONFIG.timeout.generate
     }),
-  
-  fetchGeneratedContents: (page = 1, filters = {}) => 
-    apiClient.get('/generated-contents/', { 
-      params: { page, ...filters } 
+
+  fetchGeneratedContents: (page = 1, filters = {}) =>
+    apiClient.get('/generated-contents/', {
+      params: { page, ...filters }
     }),
-  
-  fetchGeneratedContentById: (id: string) => 
+
+  fetchGeneratedContentById: (id: string) =>
     apiClient.get(`/generated-contents/${id}/`),
-  
+
   // Models and standards endpoints
-  fetchModels: () => 
+  fetchModels: () =>
     apiClient.get('/models/'),
-  
-  fetchStandardTypes: () => 
+
+  fetchStandardTypes: () =>
     apiClient.get('/standard-types/'),
-  
-  fetchStandards: (standardTypeId?: string) => 
+
+  fetchStandards: (standardTypeId?: string) =>
     apiClient.get(`/standards/${standardTypeId ? `?standard_type_id=${standardTypeId}` : ''}`),
-  
-  saveStandard: (data: any) => 
+
+  saveStandard: (data: any) =>
     apiClient.post('/standards/', data),
-  
-  compareStandards: (data: { content1: string, content2: string, standard_type_id: string }) => 
+
+  compareStandards: (data: { content1: string, content2: string, standard_type_id: string }) =>
     apiClient.post('/standards/compare/', data),
-    
+
   // Audit Questions endpoints
-  fetchAuditQuestions: (policyName?: string) => 
+  fetchAuditQuestions: (policyName?: string) =>
     apiClient.get('/audit-questions/', {
       params: policyName ? { policy_name: policyName } : {}
     }),
-    
-  generateAuditQuestions: (data: { ai_model: string, policy_name: string, number_of_questions: number }) => 
+
+  generateAuditQuestions: (data: { ai_model: string, policy_name: string, number_of_questions: number }) =>
     apiClient.post('/audit-questions/generate/', data, {
       timeout: API_CONFIG.timeout.generate
     }),
-    
-  updateAuditQuestion: (questionId: string, data: { question_text?: string, policy_name?: string, options?: string[] }) => 
+
+  updateAuditQuestion: (questionId: string, data: { question_text?: string, policy_name?: string, options?: string[] }) =>
     apiClient.put(`/audit-questions/${questionId}/`, data),
-    
-  deleteAuditQuestion: (questionId: string) => 
+
+  deleteAuditQuestion: (questionId: string) =>
     apiClient.delete(`/audit-questions/${questionId}/delete/`),
+
+  // Complaint endpoints
+  fetchComplaints: () =>
+    apiClient.get('/complaints/'),
+
+  fetchComplaintById: (complaintId: string) =>
+    apiClient.get(`/complaints/${complaintId}/`),
+
+  createComplaint: (formData: FormData) =>
+    apiClient.post('/complaints/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: API_CONFIG.timeout.upload
+    }),
+
+  updateComplaint: (complaintId: string, formData: FormData) =>
+    apiClient.patch(`/complaints/${complaintId}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: API_CONFIG.timeout.upload
+    }),
+
+  downloadComplaintFile: (complaintId: string) =>
+    apiClient.get(`/complaints/${complaintId}/download-file/`, {
+      responseType: 'blob'
+    }),
+
+  deleteComplaint: (complaintId: string) =>
+    apiClient.delete(`/complaints/${complaintId}/`),
 };
 
 export default apiService;
