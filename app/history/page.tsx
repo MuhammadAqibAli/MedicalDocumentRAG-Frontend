@@ -546,7 +546,7 @@ export default function HistoryPage() {
             <DialogTitle>Mind Map Editor: {mindMapStandard?.standard_title}</DialogTitle>
           </DialogHeader>
           {mindMapStandard && (
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden" style={{ background: '#ffffff' }}>
               <MindMapEditor
                 standard={mindMapStandard}
                 onSave={async (updatedContent, updatedTitle) => {

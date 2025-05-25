@@ -40,11 +40,11 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [title, setTitle] = useState(standard.standard_title)
-  
+
   // Parse HTML content to mind map nodes and edges
   useEffect(() => {
     const { nodes: parsedNodes, edges: parsedEdges } = parseHtmlToMindMap(standard.content, standard.standard_title)
-    
+
     // Add callbacks to nodes
     setNodes(parsedNodes.map(node => ({
       ...node,
@@ -55,12 +55,12 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
         onAddChild: addChildNode
       }
     })))
-    
+
     // Style edges based on source node color
     setEdges(parsedEdges.map(edge => {
       const sourceNode = parsedNodes.find(n => n.id === edge.source)
       const edgeColor = sourceNode?.data?.color?.border || '#f8bb4c'
-      
+
       return {
         ...edge,
         style: { stroke: edgeColor, strokeWidth: 2 },
@@ -72,19 +72,19 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
       }
     }))
   }, [standard.content, standard.standard_title, setNodes, setEdges])
-  
+
   // Handle connections between nodes
   const onConnect = useCallback(
     (connection: Connection) => {
       const sourceNode = nodes.find(n => n.id === connection.source)
       const edgeColor = sourceNode?.data?.color?.border || '#f8bb4c'
-      
+
       setEdges((eds) => addEdge({
         ...connection,
         type: 'smoothstep',
         animated: true,
         style: { stroke: edgeColor, strokeWidth: 2 },
-        markerEnd: { 
+        markerEnd: {
           type: MarkerType.ArrowClosed,
           color: edgeColor
         }
@@ -92,7 +92,7 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
     },
     [nodes, setEdges]
   )
-  
+
   // Handle saving the mind map
   const handleSave = () => {
     const updatedContent = convertMindMapToHtml(nodes, edges)
@@ -105,29 +105,29 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
     const edgesToRemove = edges.filter(
       edge => edge.source === nodeId || edge.target === nodeId
     )
-    
+
     // Find all child nodes (recursively)
     const getChildNodeIds = (parentId: string): string[] => {
       const childEdges = edges.filter(edge => edge.source === parentId)
       const childIds = childEdges.map(edge => edge.target)
-      
+
       return [
         ...childIds,
         ...childIds.flatMap(id => getChildNodeIds(id))
       ]
     }
-    
+
     const childNodeIds = getChildNodeIds(nodeId)
-    
+
     // Remove the node, its children, and all connected edges
-    setNodes(nodes => nodes.filter(node => 
+    setNodes(nodes => nodes.filter(node =>
       node.id !== nodeId && !childNodeIds.includes(node.id)
     ))
-    
-    setEdges(edges => edges.filter(edge => 
-      edge.source !== nodeId && 
-      edge.target !== nodeId && 
-      !childNodeIds.includes(edge.source) && 
+
+    setEdges(edges => edges.filter(edge =>
+      edge.source !== nodeId &&
+      edge.target !== nodeId &&
+      !childNodeIds.includes(edge.source) &&
       !childNodeIds.includes(edge.target)
     ))
   }, [nodes, edges, setNodes, setEdges])
@@ -136,31 +136,31 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
   const addChildNode = useCallback((parentId: string) => {
     const newNodeId = `node-${Date.now()}`
     const parentNode = nodes.find(n => n.id === parentId)
-    
+
     if (!parentNode) return
-    
+
     // Calculate position based on parent
     const position = {
       x: parentNode.position.x,
       y: parentNode.position.y + 120
     }
-    
+
     // Adjust position if there are other children
     const existingChildren = edges.filter(e => e.source === parentId)
     if (existingChildren.length > 0) {
       position.x += (existingChildren.length * 60)
     }
-    
+
     // Use the same color as the parent
     const nodeColor = parentNode.data.color
-    
+
     setNodes(nds => [
       ...nds,
       {
         id: newNodeId,
         type: 'editableNode',
-        data: { 
-          label: 'New Node', 
+        data: {
+          label: 'New Node',
           content: '',
           isEditing: true,
           onDelete: deleteNode,
@@ -170,9 +170,9 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
         position
       }
     ])
-    
+
     const edgeColor = nodeColor?.border || '#f8bb4c'
-    
+
     setEdges(eds => [
       ...eds,
       {
@@ -182,7 +182,7 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
         type: 'smoothstep',
         animated: true,
         style: { stroke: edgeColor, strokeWidth: 2 },
-        markerEnd: { 
+        markerEnd: {
           type: MarkerType.ArrowClosed,
           color: edgeColor
         }
@@ -194,14 +194,14 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
   const addNode = useCallback(() => {
     const newNodeId = `node-${Date.now()}`
     const parentId = nodes.find(n => n.id === 'root')?.id || 'root'
-    
+
     setNodes(nds => [
       ...nds,
       {
         id: newNodeId,
         type: 'editableNode',
-        data: { 
-          label: 'New Node', 
+        data: {
+          label: 'New Node',
           content: '',
           isEditing: true,
           onDelete: deleteNode,
@@ -210,7 +210,7 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
         position: { x: 250, y: 100 + nodes.length * 80 }
       }
     ])
-    
+
     setEdges(eds => [
       ...eds,
       {
@@ -220,14 +220,14 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
         type: 'smoothstep',
         animated: true,
         style: { stroke: '#f8bb4c', strokeWidth: 2 },
-        markerEnd: { 
+        markerEnd: {
           type: MarkerType.ArrowClosed,
           color: '#f8bb4c'
         }
       }
     ])
   }, [nodes, setNodes, setEdges, deleteNode, addChildNode])
-  
+
   return (
     <div className="w-full h-full flex flex-col">
       {/* Editor section - takes most of the height */}
@@ -243,16 +243,16 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
           minZoom={0.5}
           maxZoom={1.5}
           fitViewOptions={{ padding: 0.2 }}
-          style={{ 
+          style={{
             height: '100%',
-            background: '#000000' // Black background
+            background: '#ffffff' // White background
           }}
         >
           <Controls className="bg-white bg-opacity-80" />
-          <Background 
-            gap={16} 
-            size={1} 
-            color="#ffffff" 
+          <Background
+            gap={16}
+            size={1}
+            color="#ffffff"
             style={{ opacity: 0.05 }}
           />
           <Panel position="top-right" className="flex gap-2">
@@ -284,14 +284,14 @@ export default function MindMapEditor({ standard, onSave, onCancel }: MindMapEdi
           </Panel>
         </ReactFlow>
       </div>
-      
+
       {/* Bottom section with title and buttons */}
       <div className="p-2 border-t flex justify-between items-center min-h-[60px]">
         <div className="flex items-center gap-2 flex-1">
           <label className="text-sm font-medium">Title:</label>
-          <Input 
-            value={title} 
-            onChange={(e) => setTitle(e.target.value)} 
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             className="max-w-md"
           />
         </div>
