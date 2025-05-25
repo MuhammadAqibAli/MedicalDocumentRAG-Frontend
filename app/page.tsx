@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileUp, Sparkles, History, ClipboardCheck } from "lucide-react"
+import { FileUp, Sparkles, History, ClipboardCheck, FolderTree } from "lucide-react"
 
 export default function Home() {
   return (
@@ -11,10 +11,10 @@ export default function Home() {
       <section className="text-center max-w-3xl mx-auto mb-12">
         <h1 className="text-3xl font-bold tracking-tight mb-4">Compliant with NZ Healthcare Standards</h1>
         <p className="text-gray-600 mb-8">
-          Upload standard documents, generate content using AI models, and manage 
+          Upload standard documents, generate content using AI models, and manage
           your generated content efficiently.
         </p>
-        
+
         <div className="flex justify-center gap-4 mb-12">
           <Button asChild className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2 px-6">
             <Link href="/generate">
@@ -86,28 +86,40 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <Card className="flex flex-col h-full">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <ClipboardCheck className="h-6 w-6 text-primary" />
-              <CardTitle>Audit Questions</CardTitle>
-            </div>
-            <CardDescription>
-              Generate and manage audit questions for policy compliance
-            </CardDescription>
+        <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-medium text-blue-600">
+              <FolderTree className="h-5 w-5 text-blue-600" />
+              Document Map
+            </CardTitle>
+            <CardDescription>Visualize document relationships and structure</CardDescription>
           </CardHeader>
-          <CardContent className="flex-grow">
-            <p className="text-sm text-gray-600 mb-4">
+          <CardContent>
+            <p className="mb-4 text-sm text-gray-600">
+              Explore the interconnected structure of your documents and standards.
+            </p>
+            <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
+              <Link href="/document-map">View Document Map</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-medium text-blue-600">
+              <ClipboardCheck className="h-5 w-5 text-blue-600" />
+              Audit Questions
+            </CardTitle>
+            <CardDescription>Generate and manage audit questions for policy compliance</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-gray-600">
               Create audit questions using AI to assess compliance with your policies and procedures.
             </p>
+            <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
+              <Link href="/audit-questions">Manage Audit Questions</Link>
+            </Button>
           </CardContent>
-          <CardFooter>
-            <Link href="/audit-questions" className="w-full">
-              <Button className="w-full">
-                Manage Audit Questions
-              </Button>
-            </Link>
-          </CardFooter>
         </Card>
 
         <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
@@ -132,7 +144,7 @@ export default function Home() {
       <div className="max-w-3xl mx-auto mt-16 bg-gray-50 p-6 rounded-lg border border-gray-200">
         <h2 className="text-xl font-semibold text-gray-800 mb-2">Compliant with NZ Healthcare Standards</h2>
         <p className="text-gray-600">
-          Our Medical Assistant is designed to help healthcare professionals in New Zealand create and manage medical content 
+          Our Medical Assistant is designed to help healthcare professionals in New Zealand create and manage medical content
           while maintaining compliance with local healthcare standards and regulations.
         </p>
       </div>
