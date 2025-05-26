@@ -136,6 +136,40 @@ const apiService = {
 
   deleteComplaint: (complaintId: string) =>
     apiClient.delete(`/complaints/${complaintId}/`),
+
+  // Feedback endpoints
+  fetchFeedbacks: (page = 1, filters = {}) =>
+    apiClient.get('/feedback/', {
+      params: { page, ...filters }
+    }),
+
+  getFeedback: (id: string) =>
+    apiClient.get(`/feedback/${id}/`),
+
+  createFeedback: (formData: FormData) =>
+    apiClient.post('/feedback/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+
+  updateFeedback: (id: string, formData: FormData) =>
+    apiClient.put(`/feedback/${id}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+
+  deleteFeedback: (id: string) =>
+    apiClient.delete(`/feedback/${id}/`),
+
+  removeFeedbackAttachment: (feedbackId: string, attachmentId: string) =>
+    apiClient.delete(`/feedback/${feedbackId}/remove_attachment/?attachment_id=${attachmentId}`),
+
+  fetchPractices: () =>
+    apiClient.get('/practices/'),
+
+  fetchFeedbackMethods: () =>
+    apiClient.get('/feedback-methods/'),
+
+  fetchUsers: () =>
+    apiClient.get('/users/'),
 };
 
 export default apiService;
