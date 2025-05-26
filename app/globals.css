@@ -75,3 +75,128 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom Scrollbar Styles for Chatbot */
+@layer components {
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  .chatbot-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .chatbot-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+
+  .chatbot-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+  }
+
+  .chatbot-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  .chatbot-scrollbar::-webkit-scrollbar-corner {
+    background: #f1f5f9;
+  }
+
+  /* Dark theme scrollbar */
+  .dark .chatbot-scrollbar::-webkit-scrollbar-track {
+    background: #334155;
+  }
+
+  .dark .chatbot-scrollbar::-webkit-scrollbar-thumb {
+    background: #64748b;
+  }
+
+  .dark .chatbot-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
+
+  .dark .chatbot-scrollbar::-webkit-scrollbar-corner {
+    background: #334155;
+  }
+
+  /* Firefox scrollbar */
+  .chatbot-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+
+  .dark .chatbot-scrollbar {
+    scrollbar-color: #64748b #334155;
+  }
+
+  /* Enhanced scroll area for better UX */
+  .chatbot-scroll-area {
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+  }
+
+  .chatbot-scroll-area:hover {
+    scrollbar-color: #94a3b8 #f1f5f9;
+  }
+
+  .dark .chatbot-scroll-area:hover {
+    scrollbar-color: #475569 #334155;
+  }
+
+  /* Always visible scrollbar for better UX */
+  .chatbot-scrollbar-always::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .chatbot-scrollbar-always::-webkit-scrollbar-track {
+    background: #e2e8f0;
+    border-radius: 6px;
+    margin: 2px;
+  }
+
+  .chatbot-scrollbar-always::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 6px;
+    border: 2px solid #e2e8f0;
+    transition: all 0.2s ease;
+  }
+
+  .chatbot-scrollbar-always::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+    border-color: #cbd5e1;
+  }
+
+  .chatbot-scrollbar-always::-webkit-scrollbar-thumb:active {
+    background: #475569;
+  }
+
+  /* Dark theme for always visible scrollbar */
+  .dark .chatbot-scrollbar-always::-webkit-scrollbar-track {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .dark .chatbot-scrollbar-always::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-color: #1e293b;
+  }
+
+  .dark .chatbot-scrollbar-always::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+    border-color: #334155;
+  }
+
+  .dark .chatbot-scrollbar-always::-webkit-scrollbar-thumb:active {
+    background: #94a3b8;
+  }
+
+  /* Smooth scrolling for all chatbot elements */
+  .chatbot-smooth-scroll {
+    scroll-behavior: smooth;
+    scroll-padding-top: 1rem;
+    scroll-padding-bottom: 1rem;
+  }
+}

@@ -136,6 +136,82 @@ const apiService = {
 
   deleteComplaint: (complaintId: string) =>
     apiClient.delete(`/complaints/${complaintId}/`),
+
+  // Enhanced Chatbot endpoints - Production ready
+  chatbotMessage: (data: {
+    message: string;
+    session_id?: string;
+    user_context?: { user_id?: string };
+  }) =>
+    apiClient.post('/chatbot/message/', data, {
+      timeout: API_CONFIG.timeout.generate,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    }),
+
+  chatbotIntentDetect: (data: {
+    message: string;
+  }) =>
+    apiClient.post('/chatbot/intent-detect/', data, {
+      timeout: API_CONFIG.timeout.default
+    }),
+
+  chatbotHandleIntent: (data: {
+    intent_type: string;
+    session_id?: string;
+    parameters?: Record<string, any>;
+  }) =>
+    apiClient.post('/chatbot/handle-intent/', data, {
+      timeout: API_CONFIG.timeout.generate
+    }),
+
+  chatbotQuickActions: () =>
+    apiClient.get('/chatbot/quick-actions/', {
+      timeout: API_CONFIG.timeout.default
+    }),
+
+  chatbotHealth: () =>
+    apiClient.get('/chatbot/health/', {
+      timeout: 5000 // Quick health check
+    }),
+
+  // Conversation management
+  chatbotConversations: (params?: { limit?: number; offset?: number }) =>
+    apiClient.get('/chatbot/conversations/', {
+      params,
+      timeout: API_CONFIG.timeout.default
+    }),
+
+  chatbotGetConversation: (id: string) =>
+    apiClient.get(`/chatbot/conversations/${id}/`, {
+      timeout: API_CONFIG.timeout.default
+    }),
+
+  chatbotCompleteConversation: (id: string) =>
+    apiClient.post(`/chatbot/conversations/${id}/complete/`, {}, {
+      timeout: API_CONFIG.timeout.default
+    }),
+
+  // File upload for chatbot
+  chatbotUploadFile: (file: File, metadata?: Record<string, any>) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (metadata) {
+      formData.append('metadata', JSON.stringify(metadata));
+    }
+
+    return apiClient.post('/chatbot/upload/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: API_CONFIG.timeout.upload,
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+        console.log(`Upload Progress: ${percentCompleted}%`);
+      }
+    });
+  },
 };
 
 export default apiService;

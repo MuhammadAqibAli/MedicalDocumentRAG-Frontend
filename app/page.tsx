@@ -3,11 +3,14 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChatbotProvider } from "@/components/chatbot"
+import ClientChatbot from "@/components/chatbot/ClientChatbot"
 import { FileUp, Sparkles, History, ClipboardCheck, FolderTree } from "lucide-react"
 
 export default function Home() {
   return (
-    <div className="container mx-auto px-4 py-12">
+    <ChatbotProvider config={{ persistSession: true }}>
+      <div className="container mx-auto px-4 py-12">
       <section className="text-center max-w-3xl mx-auto mb-12">
         <h1 className="text-3xl font-bold tracking-tight mb-4">Compliant with NZ Healthcare Standards</h1>
         <p className="text-gray-600 mb-8">
@@ -148,6 +151,21 @@ export default function Home() {
           while maintaining compliance with local healthcare standards and regulations.
         </p>
       </div>
+
+      {/* Enhanced AI Chatbot Assistant */}
+      <ClientChatbot
+        config={{
+          position: 'bottom-right',
+          theme: 'light',
+          autoGreeting: true,
+          showQuickActions: true,
+          enableFileUpload: true,
+          greetingMessage: "Hello! I'm your medical assistant. I can help you with complaints, document uploads, content generation, and more. How can I assist you today?"
+        }}
+        userId="home_page_user"
+        userAuthenticated={false}
+      />
     </div>
+    </ChatbotProvider>
   )
 }

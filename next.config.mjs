@@ -32,13 +32,13 @@ const nextConfig = {
         }
       ];
     }
-    
+
     // Add a fallback for the missing module
     config.resolve.fallback = {
       ...config.resolve.fallback,
       'next/dist/server/route-modules/app-page/vendored/contexts/loadable': false
     };
-    
+
     return config;
   },
   // Updated for Next.js 15
@@ -50,7 +50,6 @@ const nextConfig = {
     'jspdf'
   ],
   reactStrictMode: true,
-  swcMinify: true,
   poweredByHeader: false
 }
 
