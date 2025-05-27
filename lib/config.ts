@@ -10,6 +10,8 @@ export const API_CONFIG = {
   }
 };
 
+// Simple chatbot configuration (moved to lib/chatbot-config.ts)
+
 // Other configuration settings can be added here
 export const APP_CONFIG = {
   appName: 'Medical Assistant',
